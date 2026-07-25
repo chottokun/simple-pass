@@ -224,6 +224,15 @@ function Run-VaultTests {
         $secUrl3 = Format-VaultUrl -Url "https://valid-site.com"
         Assert-True ($secUrl3 -eq "https://valid-site.com") "Allows valid https:// scheme"
 
+        $secUrl4 = Format-VaultUrl -Url 'https://valid-site.com --argument-injection'
+        Assert-True ($secUrl4 -eq "") "Rejects unsafe URL with spaces and arguments"
+
+        $secUrl5 = Format-VaultUrl -Url 'https://valid-site.com"--argument-injection'
+        Assert-True ($secUrl5 -eq "") "Rejects unsafe URL with double quotes"
+
+        $secUrl6 = Format-VaultUrl -Url "https://valid-site.com'--argument-injection"
+        Assert-True ($secUrl6 -eq "") "Rejects unsafe URL with single quotes"
+
         $results.Passed++
         $results.Log += "[PASS] Test 11: TDD - URL Protocol Whitelist Security Test"
     } catch {

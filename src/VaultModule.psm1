@@ -102,6 +102,12 @@ function Format-VaultUrl {
     if ([string]::IsNullOrWhiteSpace($Url)) {
         return ""
     }
+
+    # Reject URLs containing spaces, double quotes, or single quotes (argument/command injection mitigation)
+    if ($Url -match '[\s\x22\x27]') {
+        return ""
+    }
+
     $trimmed = $Url.Trim()
 
     # Reject inherently unsafe / dangerous pseudo-protocols
