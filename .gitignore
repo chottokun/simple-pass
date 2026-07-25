@@ -1,0 +1,27 @@
+# User Data & Secret Vault files (DO NOT COMMIT)
+data/vault.json
+data/vault.json.bak
+data/*.json
+!data/.gitkeep
+
+# Logs & Temporary export files
+data/logs/
+data/logs/*.log
+*.log
+*.tmp
+*~
+*.csv
+
+# AI Agent / System Folders
+.agents/
+.gemini/
+
+# Scratch and temporary scripts
+scratch/
+
+# OS / Editor specific
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
