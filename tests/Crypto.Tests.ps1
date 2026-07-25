@@ -148,6 +148,72 @@ function Run-CryptoTests {
         $results.Log += "[FAIL] Test 6: Corrupt vault rejection test - $_"
     }
 
+    # Test 7: Get-HmacSignature - Happy path / Known vector validation
+    try {
+        $testData = [byte[]]@(10, 11, 12)
+        $testKey = [byte[]]@(1, 2, 3)
+        $sig = Get-HmacSignature -Data $testData -HmacKey $testKey
+
+        $sigBase64 = [Convert]::ToBase64String($sig)
+        $expectedBase64 = "7A7u7vnHiED1Ij9vlkHt8YmaqnylTtkbeGWteOzRnMY="
+        Assert-True ($sigBase64 -eq $expectedBase64) "HMAC signature matches expected test vector"
+        $results.Passed++
+        $results.Log += "[PASS] Test 7: Get-HmacSignature - Happy path / Known vector validation"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 7: Get-HmacSignature happy path test - $_"
+    }
+
+    # Test 8: Get-HmacSignature - Different inputs or keys produce distinct signatures
+    try {
+        $testData1 = [byte[]]@(10, 11, 12)
+        $testData2 = [byte[]]@(10, 11, 13)
+        $testKey1 = [byte[]]@(1, 2, 3)
+        $testKey2 = [byte[]]@(1, 2, 4)
+
+        $sig1 = Get-HmacSignature -Data $testData1 -HmacKey $testKey1
+        $sig2 = Get-HmacSignature -Data $testData2 -HmacKey $testKey1
+        $sig3 = Get-HmacSignature -Data $testData1 -HmacKey $testKey2
+
+        $sig1Base64 = [Convert]::ToBase64String($sig1)
+        $sig2Base64 = [Convert]::ToBase64String($sig2)
+        $sig3Base64 = [Convert]::ToBase64String($sig3)
+
+        Assert-True ($sig1Base64 -ne $sig2Base64) "Different input data yields different HMAC signature"
+        Assert-True ($sig1Base64 -ne $sig3Base64) "Different key yields different HMAC signature"
+        $results.Passed++
+        $results.Log += "[PASS] Test 8: Get-HmacSignature - Different inputs or keys produce distinct signatures"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 8: Get-HmacSignature distinct signatures test - $_"
+    }
+
+    # Test 9: Get-HmacSignature - Edge cases (empty data or empty key)
+    try {
+        $emptyData = [byte[]]@()
+        $emptyKey = [byte[]]@()
+        $testData = [byte[]]@(10, 11, 12)
+        $testKey = [byte[]]@(1, 2, 3)
+
+        $sigEmptyBoth = Get-HmacSignature -Data $emptyData -HmacKey $emptyKey
+        $sigEmptyData = Get-HmacSignature -Data $emptyData -HmacKey $testKey
+        $sigEmptyKey = Get-HmacSignature -Data $testData -HmacKey $emptyKey
+
+        Assert-True ($null -ne $sigEmptyBoth) "HMAC signature computed with empty data and key is not null"
+        Assert-True ($null -ne $sigEmptyData) "HMAC signature computed with empty data is not null"
+        Assert-True ($null -ne $sigEmptyKey) "HMAC signature computed with empty key is not null"
+
+        # Verify changing key with empty data also changes signature
+        $sigEmptyDataOtherKey = Get-HmacSignature -Data $emptyData -HmacKey ([byte[]]@(4, 5, 6))
+        Assert-True ([Convert]::ToBase64String($sigEmptyData) -ne [Convert]::ToBase64String($sigEmptyDataOtherKey)) "HMAC of empty data with different keys are distinct"
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 9: Get-HmacSignature - Edge cases (empty data or empty key)"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 9: Get-HmacSignature edge cases test - $_"
+    }
+
     return $results
 }
 
