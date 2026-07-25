@@ -153,15 +153,15 @@ function Run-GuiNewFeaturesTests {
         $results.Log += "[FAIL] Test 4: URL Scheme Formatting - $_"
     }
 
-    # Test 5: DataGrid Entry Custom Reordering (Move Up / Down)
+    # Test 5: DataGrid Entry Custom Reordering (Move Up)
     try {
         $e1 = New-VaultEntry -Title "Alpha"
         $e2 = New-VaultEntry -Title "Beta"
         $entries = @($e1, $e2)
 
-        $reordered = Move-VaultEntryDown -Entries $entries -TargetId $e1.id
-        Assert-True ($reordered[0].title -eq "Beta") "Beta is now index 0 after Alpha moved down"
-        Assert-True ($reordered[1].title -eq "Alpha") "Alpha is now index 1 after moving down"
+        $reordered = Move-VaultEntryUp -Entries $entries -TargetId $e2.id
+        Assert-True ($reordered[0].title -eq "Beta") "Beta is now index 0 after Beta moved up"
+        Assert-True ($reordered[1].title -eq "Alpha") "Alpha is now index 1 after Beta moved up"
 
         $results.Passed++
         $results.Log += "[PASS] Test 5: DataGrid Entry Custom Reordering"

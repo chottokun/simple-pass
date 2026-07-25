@@ -190,7 +190,7 @@ function Run-VaultTests {
         $results.Log += "[FAIL] Test 9: TDD - URL Scheme Auto-Completion - $_"
     }
 
-    # Test 10: TDD - Entry Custom Order Swap (Up / Down)
+    # Test 10: TDD - Entry Custom Order Swap (Up)
     try {
         $e1 = New-VaultEntry -Title "First"
         $e2 = New-VaultEntry -Title "Second"
@@ -201,10 +201,6 @@ function Run-VaultTests {
         $movedUp = Move-VaultEntryUp -Entries $list -TargetId $e2.id
         Assert-True ($movedUp[0].title -eq "Second") "Second moved to index 0 when moved up"
         Assert-True ($movedUp[1].title -eq "First") "First shifted to index 1"
-
-        # Move "First" Down -> Result: Second, Third, First
-        $movedDown = Move-VaultEntryDown -Entries $movedUp -TargetId $movedUp[1].id
-        Assert-True ($movedDown[2].title -eq "First") "First moved to index 2 when moved down"
 
         $results.Passed++
         $results.Log += "[PASS] Test 10: TDD - Entry Custom Order Swap"
