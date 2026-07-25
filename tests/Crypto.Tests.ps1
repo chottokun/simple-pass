@@ -148,6 +148,70 @@ function Run-CryptoTests {
         $results.Log += "[FAIL] Test 6: Corrupt vault rejection test - $_"
     }
 
+    # Test 7: New-CryptoSalt default length
+    try {
+        $salt = [byte[]](New-CryptoSalt)
+        Assert-True ($null -ne $salt) "Salt should not be null"
+        Assert-True ($salt.GetType().Name -eq "Byte[]") "Salt should be a byte array"
+        Assert-True ($salt.Length -eq 32) "Default salt length should be 32"
+        $results.Passed++
+        $results.Log += "[PASS] Test 7: New-CryptoSalt default length (32 bytes)"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 7: New-CryptoSalt default length - $_"
+    }
+
+    # Test 8: New-CryptoSalt custom lengths
+    try {
+        $salt16 = New-CryptoSalt -Length 16
+        Assert-True ($salt16.Length -eq 16) "Salt length should be 16"
+
+        $salt64 = New-CryptoSalt -Length 64
+        Assert-True ($salt64.Length -eq 64) "Salt length should be 64"
+        $results.Passed++
+        $results.Log += "[PASS] Test 8: New-CryptoSalt custom lengths (16, 64 bytes)"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 8: New-CryptoSalt custom lengths - $_"
+    }
+
+    # Test 9: New-CryptoSalt uniqueness and randomness
+    try {
+        $saltA = New-CryptoSalt -Length 32
+        $saltB = New-CryptoSalt -Length 32
+
+        # Verify that two subsequently generated salts are not identical (highly unlikely to be identical with CSPRNG)
+        $areIdentical = $true
+        for ($i = 0; $i -lt 32; $i++) {
+            if ($saltA[$i] -ne $saltB[$i]) {
+                $areIdentical = $false
+                break
+            }
+        }
+        Assert-True (-not $areIdentical) "Two generated salts of 32 bytes should be different (randomness verification)"
+        $results.Passed++
+        $results.Log += "[PASS] Test 9: New-CryptoSalt uniqueness/randomness"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 9: New-CryptoSalt uniqueness/randomness - $_"
+    }
+
+    # Test 10: New-CryptoSalt boundary and error cases
+    try {
+        $failedAsExpected = $false
+        try {
+            $invalidSalt = New-CryptoSalt -Length -5
+        } catch {
+            $failedAsExpected = $true
+        }
+        Assert-True $failedAsExpected "Generating a salt with a negative length should fail/throw"
+        $results.Passed++
+        $results.Log += "[PASS] Test 10: New-CryptoSalt negative length handling"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 10: New-CryptoSalt negative length handling - $_"
+    }
+
     return $results
 }
 
