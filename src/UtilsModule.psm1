@@ -21,10 +21,23 @@ function New-RandomPassword {
 
     $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
 
+    function Get-SecureRandomInt([int]$range) {
+        if ($range -le 1) { return 0 }
+        $bytes = New-Object byte[] 4
+        # Calculate maximum usable value to avoid modulo bias
+        # [uint32]::MaxValue is 4294967295
+        $maxUsable = [uint32]::MaxValue - ([uint32]::MaxValue % [uint32]$range)
+        while ($true) {
+            $rng.GetBytes($bytes)
+            $val = [System.BitConverter]::ToUInt32($bytes, 0)
+            if ($val -lt $maxUsable) {
+                return [int]($val % [uint32]$range)
+            }
+        }
+    }
+
     function Get-RandomCharFrom([string]$source) {
-        $byte = New-Object byte[] 1
-        $rng.GetBytes($byte)
-        $index = $byte[0] % $source.Length
+        $index = Get-SecureRandomInt $source.Length
         return $source[$index]
     }
 
@@ -58,11 +71,9 @@ function New-RandomPassword {
         $passChars.Add((Get-RandomCharFrom $charPool))
     }
 
-    # Fisher-Yates shuffle
+    # Fisher-Yates shuffle using secure unbiased random integer generation
     for ($i = $passChars.Count - 1; $i -gt 0; $i--) {
-        $byte = New-Object byte[] 1
-        $rng.GetBytes($byte)
-        $j = $byte[0] % ($i + 1)
+        $j = Get-SecureRandomInt ($i + 1)
         $temp = $passChars[$i]
         $passChars[$i] = $passChars[$j]
         $passChars[$j] = $temp
