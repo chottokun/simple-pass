@@ -148,6 +148,42 @@ function Run-CryptoTests {
         $results.Log += "[FAIL] Test 6: Corrupt vault rejection test - $_"
     }
 
+    # Test 7: Protect-DataWithDpapi and Unprotect-DataWithDpapi behavior
+    try {
+        $testData = [System.Text.Encoding]::UTF8.GetBytes("DpapiSecretData")
+        $isWindowsPlatform = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
+
+        if ($isWindowsPlatform) {
+            $protected = Protect-DataWithDpapi -Data $testData
+            Assert-True ($null -ne $protected) "DPAPI protection returned some bytes"
+            Assert-True ($protected.Length -gt 0) "DPAPI protected data length is non-zero"
+
+            $unprotected = Unprotect-DataWithDpapi -EncryptedData $protected
+            Assert-True ($null -ne $unprotected) "DPAPI unprotection returned some bytes"
+            $unprotectedString = [System.Text.Encoding]::UTF8.GetString($unprotected)
+            Assert-True ($unprotectedString -eq "DpapiSecretData") "DPAPI decrypted matches original string"
+
+            $results.Passed++
+            $results.Log += "[PASS] Test 7: Protect-DataWithDpapi and Unprotect-DataWithDpapi round-trip encryption/decryption (Windows)"
+        } else {
+            $throwsOnLinux = $false
+            try {
+                $protected = Protect-DataWithDpapi -Data $testData
+            } catch {
+                if ($_.Exception.InnerException -and $_.Exception.InnerException -is [System.PlatformNotSupportedException] -or $_.Exception -is [System.PlatformNotSupportedException] -or $_.Exception.Message.Contains("not supported")) {
+                    $throwsOnLinux = $true
+                }
+            }
+            Assert-True $throwsOnLinux "DPAPI protection throws PlatformNotSupportedException on Linux/macOS"
+
+            $results.Passed++
+            $results.Log += "[PASS] Test 7: Protect-DataWithDpapi throws PlatformNotSupportedException on non-Windows"
+        }
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 7: DPAPI tests failed - $_"
+    }
+
     return $results
 }
 
