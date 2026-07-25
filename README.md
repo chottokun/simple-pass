@@ -1,6 +1,6 @@
 # SimplePASS 🔐
 
-[![SimplePASS CI Workflow](https://github.com/username/SimplePASS/actions/workflows/ci.yml/badge.svg)](https://github.com/username/SimplePASS/actions)
+[![SimplePASS CI Workflow](https://github.com/chottokun/simple-pass/actions/workflows/ci.yml/badge.svg)](https://github.com/chottokun/simple-pass/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PowerShell 5.1+](https://img.shields.io/badge/PowerShell-5.1%2B-blue.svg)](https://microsoft.com/powershell)
 
