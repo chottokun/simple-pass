@@ -214,6 +214,76 @@ function Run-CryptoTests {
         $results.Log += "[FAIL] Test 9: Get-HmacSignature edge cases test - $_"
     }
 
+    # Test 10: New-CryptoSalt default length
+    try {
+        $salt = New-CryptoSalt
+        Assert-True ($null -ne $salt) "Salt should not be null"
+        Assert-True ($salt.Count -eq 32) "Default salt length should be 32 bytes"
+        Assert-True ($salt[0].GetType().FullName -eq "System.Byte") "Salt should be an array of bytes"
+        $results.Passed++
+        $results.Log += "[PASS] Test 10: New-CryptoSalt default length is 32 bytes"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 10: New-CryptoSalt default length - $_"
+    }
+
+    # Test 11: New-CryptoSalt custom lengths
+    try {
+        $salt16 = New-CryptoSalt -Length 16
+        Assert-True ($salt16.Count -eq 16) "Custom salt length 16 bytes"
+
+        $salt64 = New-CryptoSalt -Length 64
+        Assert-True ($salt64.Count -eq 64) "Custom salt length 64 bytes"
+
+        $salt0 = New-CryptoSalt -Length 0
+        Assert-True ($salt0.Count -eq 0) "Custom salt length 0 bytes"
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 11: New-CryptoSalt supports custom lengths (0, 16, 64)"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 11: New-CryptoSalt custom lengths - $_"
+    }
+
+    # Test 12: New-CryptoSalt uniqueness and randomness
+    try {
+        $saltA = New-CryptoSalt -Length 32
+        $saltB = New-CryptoSalt -Length 32
+
+        # Check that they are not identical
+        $areIdentical = $true
+        for ($i = 0; $i -lt 32; $i++) {
+            if ($saltA[$i] -ne $saltB[$i]) {
+                $areIdentical = $false
+                break
+            }
+        }
+        Assert-True (-not $areIdentical) "Consecutive salt values must be unique/random"
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 12: New-CryptoSalt consecutive outputs are unique and random"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 12: New-CryptoSalt uniqueness - $_"
+    }
+
+    # Test 13: New-CryptoSalt invalid inputs (negative length)
+    try {
+        $failedAsExpected = $false
+        try {
+            $invalidSalt = New-CryptoSalt -Length -5
+        } catch {
+            $failedAsExpected = $true
+        }
+        Assert-True $failedAsExpected "New-CryptoSalt should fail with negative length"
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 13: New-CryptoSalt handles negative length error cleanly"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 13: New-CryptoSalt invalid inputs - $_"
+    }
+
     return $results
 }
 
