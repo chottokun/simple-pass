@@ -249,6 +249,36 @@ function Run-VaultTests {
     } catch {
         $results.Failed++
         $results.Log += "[FAIL] Test 12: TDD - Entry Move To Top - $_"
+    }
+
+    # Test 13: Test-VaultExists Implementation Tests
+    try {
+        # 1. Existing file path
+        $existingPath = [System.IO.Path]::GetTempFileName()
+        try {
+            Set-Content -Path $existingPath -Value "dummy content"
+            $exists = Test-VaultExists -Path $existingPath
+            Assert-True $exists "Test-VaultExists returns true when file exists"
+        } finally {
+            if (Test-Path $existingPath) { Remove-Item $existingPath -Force -ErrorAction SilentlyContinue }
+        }
+
+        # 2. Non-existing file path
+        $nonExistingPath = Join-Path ([System.IO.Path]::GetTempPath()) "non_existing_file_$([guid]::NewGuid()).json"
+        $exists2 = Test-VaultExists -Path $nonExistingPath
+        Assert-True (-not $exists2) "Test-VaultExists returns false when file does not exist"
+
+        # 3. Default path (should match the existence of Get-DefaultVaultPath)
+        $defaultPath = Get-DefaultVaultPath
+        $defaultExistsExpected = Test-Path $defaultPath
+        $defaultExistsActual = Test-VaultExists
+        Assert-True ($defaultExistsActual -eq $defaultExistsExpected) "Test-VaultExists with default parameter matches actual existence of default vault path"
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 13: Test-VaultExists validation"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 13: Test-VaultExists validation - $_"
     } finally {
         if (Test-Path $tempFile) {
             Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
