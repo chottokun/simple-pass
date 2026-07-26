@@ -332,7 +332,6 @@ function Run-VaultTests {
     } catch {
         $results.Failed++
         $results.Log += "[FAIL] Test 14: Get-ObjectPropertyValue - $_"
-    }
     } finally {
         if (Test-Path $tempFile) {
             Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
