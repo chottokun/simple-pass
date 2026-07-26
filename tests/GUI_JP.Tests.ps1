@@ -117,6 +117,43 @@ function Run-GuiJpTests {
         $results.Log += "[FAIL] Test 2: Lock-VaultApp State Reset and UI Collapsing - $_"
     }
 
+    # Test 3: Stop-AutoLockTimer functionality
+    try {
+        $jpScript = Join-Path $srcDir "SimplePASS_JP.ps1"
+        $scriptContent = [System.IO.File]::ReadAllText($jpScript, [System.Text.Encoding]::UTF8)
+
+        # Parse SimplePASS_JP.ps1 and extract Stop-AutoLockTimer function body
+        $ast = [System.Management.Automation.Language.Parser]::ParseInput($scriptContent, [ref]$null, [ref]$null)
+        $funcAst = $ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Stop-AutoLockTimer' }, $true)[0]
+        Assert-True ($null -ne $funcAst) "Stop-AutoLockTimer function AST successfully extracted"
+        $sb = $funcAst.Body.GetScriptBlock()
+
+        # Scenario A: When $script:AutoLockTimer is $null, it does not throw
+        $script:AutoLockTimer = $null
+        & $sb
+        Assert-True ($null -eq $script:AutoLockTimer) "Stop-AutoLockTimer completes cleanly when timer is null"
+
+        # Scenario B: When $script:AutoLockTimer is initialized, calling Stop-AutoLockTimer stops the timer
+        $global:TimerStopCalled = $false
+
+        # In PowerShell, we can add a script method to a PSCustomObject using MemberType ScriptMethod
+        $mockTimer = [PSCustomObject]@{ Name = "MockTimer" }
+        $mockTimer | Add-Member -MemberType ScriptMethod -Name "Stop" -Value {
+            $global:TimerStopCalled = $true
+        } -Force
+
+        $script:AutoLockTimer = $mockTimer
+        & $sb
+
+        Assert-True $global:TimerStopCalled "Stop-AutoLockTimer successfully called Stop() on the active timer"
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 3: Stop-AutoLockTimer functionality"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 3: Stop-AutoLockTimer functionality - $_"
+    }
+
     return $results
 }
 
