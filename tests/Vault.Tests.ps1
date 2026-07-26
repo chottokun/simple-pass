@@ -190,21 +190,21 @@ function Run-VaultTests {
         $results.Log += "[FAIL] Test 9: TDD - URL Scheme Auto-Completion - $_"
     }
 
-    # Test 10: TDD - Entry Custom Order Swap (Up / Down)
+    # Test 10: TDD - Entry Custom Order Swap (Down)
     try {
         $e1 = New-VaultEntry -Title "First"
         $e2 = New-VaultEntry -Title "Second"
         $e3 = New-VaultEntry -Title "Third"
         $list = @($e1, $e2, $e3)
 
-        # Move "Second" Up -> Result: Second, First, Third
-        $movedUp = Move-VaultEntryUp -Entries $list -TargetId $e2.id
-        Assert-True ($movedUp[0].title -eq "Second") "Second moved to index 0 when moved up"
-        Assert-True ($movedUp[1].title -eq "First") "First shifted to index 1"
+        # Move "First" Down -> Result: Second, First, Third
+        $movedDown = Move-VaultEntryDown -Entries $list -TargetId $e1.id
+        Assert-True ($movedDown[0].title -eq "Second") "Second shifted to index 0"
+        Assert-True ($movedDown[1].title -eq "First") "First moved to index 1 when moved down"
 
-        # Move "First" Down -> Result: Second, Third, First
-        $movedDown = Move-VaultEntryDown -Entries $movedUp -TargetId $movedUp[1].id
-        Assert-True ($movedDown[2].title -eq "First") "First moved to index 2 when moved down"
+        # Move "First" Down again -> Result: Second, Third, First
+        $movedDown2 = Move-VaultEntryDown -Entries $movedDown -TargetId $e1.id
+        Assert-True ($movedDown2[2].title -eq "First") "First moved to index 2 when moved down again"
 
         $results.Passed++
         $results.Log += "[PASS] Test 10: TDD - Entry Custom Order Swap"

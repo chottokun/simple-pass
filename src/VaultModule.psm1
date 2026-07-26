@@ -123,37 +123,6 @@ function Format-VaultUrl {
 
 <#
 .SYNOPSIS
-    Moves a vault entry up by 1 position in the array.
-#>
-function Move-VaultEntryUp {
-    [CmdletBinding()]
-    param(
-        [array]$Entries = @(),
-        [Parameter(Mandatory=$true)]
-        [string]$TargetId
-    )
-    $list = [System.Collections.Generic.List[Object]]::new()
-    foreach ($e in $Entries) { $list.Add($e) }
-
-    $index = -1
-    for ($i = 0; $i -lt $list.Count; $i++) {
-        if ($list[$i].id -eq $TargetId) {
-            $index = $i
-            break
-        }
-    }
-
-    if ($index -gt 0) {
-        $temp = $list[$index]
-        $list[$index] = $list[$index - 1]
-        $list[$index - 1] = $temp
-    }
-
-    return @($list.ToArray())
-}
-
-<#
-.SYNOPSIS
     Moves a vault entry to the top (index 0) of the array.
 #>
 function Move-VaultEntryToTop {
@@ -322,4 +291,4 @@ function Export-VaultToCsv {
     $exportObjects | Export-Csv -Path $Path -NoTypeInformation -Encoding UTF8 -Force
 }
 
-Export-ModuleMember -Function Get-DefaultVaultPath, Test-VaultExists, Save-Vault, Load-Vault, New-VaultEntry, Search-VaultEntries, Export-VaultToCsv, Format-VaultUrl, Move-VaultEntryUp, Move-VaultEntryDown, Move-VaultEntryToTop
+Export-ModuleMember -Function Get-DefaultVaultPath, Test-VaultExists, Save-Vault, Load-Vault, New-VaultEntry, Search-VaultEntries, Export-VaultToCsv, Format-VaultUrl, Move-VaultEntryDown, Move-VaultEntryToTop
