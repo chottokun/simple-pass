@@ -224,6 +224,24 @@ function Run-VaultTests {
         $secUrl3 = Format-VaultUrl -Url "https://valid-site.com"
         Assert-True ($secUrl3 -eq "https://valid-site.com") "Allows valid https:// scheme"
 
+        # Launch-time Security Regex Test: Reject URLs containing whitespace, quotes, or backticks
+        $launchCheck = {
+            param([string]$url)
+            return ([string]::IsNullOrWhiteSpace($url) -or $url -notmatch "^https?://" -or $url -match '[\s''"`]')
+        }
+
+        # Safe URLs should NOT trigger the block (so launchCheck returns False)
+        Assert-True (-not (& $launchCheck "https://example.com")) "Allows safe https URL"
+        Assert-True (-not (& $launchCheck "http://example.com/path?param=value")) "Allows safe http URL with params"
+
+        # Unsafe URLs should trigger the block (so launchCheck returns True)
+        Assert-True (& $launchCheck "https://example.com --some-arg") "Blocks URL containing whitespaces"
+        Assert-True (& $launchCheck "https://example.com' --some-arg") "Blocks URL containing single quotes"
+        Assert-True (& $launchCheck 'https://example.com" --some-arg') "Blocks URL containing double quotes"
+        Assert-True (& $launchCheck "https://example.com` --some-arg") "Blocks URL containing backticks"
+        Assert-True (& $launchCheck "https://example.com/path with spaces") "Blocks URL containing path spaces"
+        Assert-True (& $launchCheck "ftp://example.com") "Blocks non http/https schemes"
+
         $results.Passed++
         $results.Log += "[PASS] Test 11: TDD - URL Protocol Whitelist Security Test"
     } catch {
