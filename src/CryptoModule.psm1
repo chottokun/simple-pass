@@ -202,5 +202,5 @@ function ConvertFrom-EncryptedVaultData {
     return $jsonText
 }
 
-Export-ModuleMember -Function ConvertTo-EncryptedVaultData, ConvertFrom-EncryptedVaultData, New-CryptoSalt, Derive-KeyIVAndHmac, Protect-DataWithAes, Unprotect-DataWithAes, Protect-DataWithDpapi, Unprotect-DataWithDpapi
+Export-ModuleMember -Function ConvertTo-EncryptedVaultData, ConvertFrom-EncryptedVaultData, New-CryptoSalt, Derive-KeyIVAndHmac, Protect-DataWithAes, Unprotect-DataWithAes, Protect-DataWithDpapi, Unprotect-DataWithDpapi, Get-HmacSignature
 
