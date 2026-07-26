@@ -14,7 +14,7 @@ function Get-SecureRandomInt {
 
     $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
     try {
-        $bytes = New-Object byte[] 4
+        $bytes = [byte[]]::new(4)
         $limit = [uint32]::MaxValue - ([uint32]::MaxValue % [uint32]$Max)
 
         while ($true) {
@@ -114,11 +114,11 @@ function Set-ClipboardWithAutoClear {
     }
 
     if ($ClearAfterSeconds -gt 0 -and $setSuccess) {
-        $jobScript = {
+        $clearScript = {
             param([string]$copiedText, [int]$delaySec)
             Start-Sleep -Seconds $delaySec
-            Add-Type -AssemblyName PresentationCore
-            Add-Type -AssemblyName System.Windows.Forms
+            Add-Type -AssemblyName PresentationCore -ErrorAction SilentlyContinue
+            Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
             try {
                 if ([System.Windows.Clipboard]::GetText() -eq $copiedText) {
                     [System.Windows.Clipboard]::Clear()
@@ -131,7 +131,34 @@ function Set-ClipboardWithAutoClear {
                 } catch {}
             }
         }
-        Start-Job -ScriptBlock $jobScript -ArgumentList $Text, $ClearAfterSeconds | Out-Null
+
+        # Use an asynchronous STA background runspace and PowerShell instance to correctly run WPF clipboard functions
+        $rs = [runspacefactory]::CreateRunspace()
+        $rs.ApartmentState = "STA"
+        $rs.ThreadOptions = "UseNewThread"
+        $rs.Open()
+
+        $p = [powershell]::Create()
+        $p.Runspace = $rs
+        [void]$p.AddScript($clearScript)
+        [void]$p.AddArgument($Text)
+        [void]$p.AddArgument($ClearAfterSeconds)
+
+        $callback = [AsyncCallback]{
+            param($ar)
+            $stateObj = $ar.AsyncState
+            $p_inst = $stateObj.PowerShell
+            $rs_inst = $stateObj.Runspace
+            try {
+                $null = $p_inst.EndInvoke($ar)
+            } catch {}
+            try { $p_inst.Dispose() } catch {}
+            try { $rs_inst.Close() } catch {}
+            try { $rs_inst.Dispose() } catch {}
+        }
+
+        $stateObj = [PSCustomObject]@{ PowerShell = $p; Runspace = $rs }
+        [void]$p.BeginInvoke([System.Management.Automation.PSDataCollection[System.Management.Automation.PSObject]]::new(), [System.Management.Automation.PSInvocationSettings]::new(), $callback, $stateObj)
     }
 
     return $setSuccess

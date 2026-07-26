@@ -239,19 +239,8 @@ function New-VaultEntry {
 function Get-ObjectPropertyValue {
     param($obj, [string]$propName)
     if ($null -eq $obj) { return "" }
-    try {
-        if ($obj.PSObject -and $obj.PSObject.Properties[$propName]) {
-            $val = $obj.PSObject.Properties[$propName].Value
-            if ($null -ne $val) { return $val.ToString() }
-        }
-    } catch {}
-    try {
-        if ($obj -is [hashtable] -and $obj.ContainsKey($propName)) {
-            $val = $obj[$propName]
-            if ($null -ne $val) { return $val.ToString() }
-        }
-    } catch {}
-    return ""
+    # Utilizing rapid type casting and direct dot property access for maximum speed
+    return [string]$obj.$propName
 }
 
 function Search-VaultEntries {
@@ -266,10 +255,10 @@ function Search-VaultEntries {
     $kw = $Keyword.ToLower()
     $matchedList = [System.Collections.Generic.List[Object]]::new()
     foreach ($entry in $Entries) {
-        $t  = (Get-ObjectPropertyValue -obj $entry -propName "title").ToLower()
-        $u  = (Get-ObjectPropertyValue -obj $entry -propName "url").ToLower()
-        $un = (Get-ObjectPropertyValue -obj $entry -propName "username").ToLower()
-        $n  = (Get-ObjectPropertyValue -obj $entry -propName "note").ToLower()
+        $t  = ([string]$entry.title).ToLower()
+        $u  = ([string]$entry.url).ToLower()
+        $un = ([string]$entry.username).ToLower()
+        $n  = ([string]$entry.note).ToLower()
 
         if ($t.Contains($kw) -or $u.Contains($kw) -or $un.Contains($kw) -or $n.Contains($kw)) {
             $matchedList.Add($entry)
@@ -297,18 +286,12 @@ function Export-VaultToCsv {
 
     $exportObjects = [System.Collections.Generic.List[Object]]::new()
     foreach ($entry in $Entries) {
-        $t  = Get-ObjectPropertyValue -obj $entry -propName "title"
-        $u  = Get-ObjectPropertyValue -obj $entry -propName "url"
-        $un = Get-ObjectPropertyValue -obj $entry -propName "username"
-        $p  = Get-ObjectPropertyValue -obj $entry -propName "password"
-        $n  = Get-ObjectPropertyValue -obj $entry -propName "note"
-
         $exportObjects.Add([PSCustomObject]@{
-            Title    = $t
-            URL      = $u
-            Username = $un
-            Password = $p
-            Note     = $n
+            Title    = [string]$entry.title
+            URL      = [string]$entry.url
+            Username = [string]$entry.username
+            Password = [string]$entry.password
+            Note     = [string]$entry.note
         })
     }
 
