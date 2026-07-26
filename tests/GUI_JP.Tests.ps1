@@ -117,6 +117,135 @@ function Run-GuiJpTests {
         $results.Log += "[FAIL] Test 2: Lock-VaultApp State Reset and UI Collapsing - $_"
     }
 
+    # Test 3: Start-AutoLockTimer and Stop-AutoLockTimer Mechanics
+    try {
+        # Ensure System.Windows.Visibility type exists (especially on Linux)
+        try {
+            $null = [System.Windows.Visibility]
+        } catch {
+            $definition = @'
+            namespace System.Windows {
+                public enum Visibility {
+                    Visible = 0,
+                    Hidden = 1,
+                    Collapsed = 2
+                }
+            }
+'@
+            Add-Type -TypeDefinition $definition -ErrorAction SilentlyContinue
+        }
+
+        $jpScript = Join-Path $srcDir "SimplePASS_JP.ps1"
+        $scriptContent = [System.IO.File]::ReadAllText($jpScript, [System.Text.Encoding]::UTF8)
+
+        # Parse SimplePASS_JP.ps1 and extract Start-AutoLockTimer and Stop-AutoLockTimer function bodies
+        $ast = [System.Management.Automation.Language.Parser]::ParseInput($scriptContent, [ref]$null, [ref]$null)
+
+        $startFuncAst = $ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Start-AutoLockTimer' }, $true)[0]
+        Assert-True ($null -ne $startFuncAst) "Start-AutoLockTimer function AST successfully extracted"
+        $startSb = $startFuncAst.Body.GetScriptBlock()
+
+        $stopFuncAst = $ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Stop-AutoLockTimer' }, $true)[0]
+        Assert-True ($null -ne $stopFuncAst) "Stop-AutoLockTimer function AST successfully extracted"
+        $stopSb = $stopFuncAst.Body.GetScriptBlock()
+
+        # Mock dependent functions
+        $global:LockVaultAppCalled = $false
+        $global:LockVaultAppStatusText = $null
+        function Lock-VaultApp {
+            param([string]$StatusText)
+            $global:LockVaultAppCalled = $true
+            $global:LockVaultAppStatusText = $StatusText
+        }
+
+        # Mock New-Object to intercept DispatcherTimer instantiation on Linux
+        function New-Object {
+            param(
+                [string]$TypeName,
+                [object[]]$ArgumentList
+            )
+            if ($TypeName -eq "System.Windows.Threading.DispatcherTimer") {
+                $mockTimer = [PSCustomObject]@{
+                    Interval = $null
+                    TickHandlers = [System.Collections.Generic.List[scriptblock]]::new()
+                    StartCalled = $false
+                    StopCalled = $false
+                }
+                $mockTimer | Add-Member -MemberType ScriptMethod -Name "Add_Tick" -Value {
+                    param($sb)
+                    $this.TickHandlers.Add($sb)
+                }
+                $mockTimer | Add-Member -MemberType ScriptMethod -Name "Start" -Value {
+                    $this.StartCalled = $true
+                }
+                $mockTimer | Add-Member -MemberType ScriptMethod -Name "Stop" -Value {
+                    $this.StopCalled = $true
+                }
+                return $mockTimer
+            } else {
+                Microsoft.PowerShell.Utility\New-Object -TypeName $TypeName -ArgumentList $ArgumentList
+            }
+        }
+
+        # Mock script variables
+        $script:AutoLockTimer = $null
+        $script:LastActivityTime = $null
+
+        # Mock GUI Controls
+        $mainGrid = [PSCustomObject]@{ Visibility = [System.Windows.Visibility]::Visible }
+
+        # Execute Start-AutoLockTimer
+        & $startSb
+
+        # Verify timer is created and configured correctly
+        Assert-True ($null -ne $script:AutoLockTimer) "AutoLockTimer was created"
+        Assert-True ($script:AutoLockTimer.Interval -eq [TimeSpan]::FromSeconds(30)) "AutoLockTimer Interval was set to 30 seconds"
+        Assert-True ($script:AutoLockTimer.StartCalled) "AutoLockTimer.Start() was called"
+        Assert-True ($script:AutoLockTimer.TickHandlers.Count -eq 1) "One Tick handler was registered"
+
+        # Verify LastActivityTime is updated
+        $now = [DateTime]::Now
+        $diff = ($now - $script:LastActivityTime).TotalSeconds
+        Assert-True ($diff -lt 5 -and $diff -ge 0) "LastActivityTime was updated to now"
+
+        # Verify tick handler logic
+        $tickHandler = $script:AutoLockTimer.TickHandlers[0]
+
+        # Case A: Idle time >= 5 minutes AND mainGrid is Visible -> should lock vault
+        $script:LastActivityTime = [DateTime]::Now.AddMinutes(-6)
+        $mainGrid.Visibility = [System.Windows.Visibility]::Visible
+        $global:LockVaultAppCalled = $false
+        $global:LockVaultAppStatusText = $null
+        & $tickHandler
+        Assert-True $global:LockVaultAppCalled "Lock-VaultApp was called when idle and visible"
+        Assert-True ($global:LockVaultAppStatusText -eq "5分間無操作のため自動ロックされました。") "Lock-VaultApp status text is correct"
+
+        # Case B: Idle time < 5 minutes AND mainGrid is Visible -> should NOT lock vault
+        $script:LastActivityTime = [DateTime]::Now.AddMinutes(-4)
+        $mainGrid.Visibility = [System.Windows.Visibility]::Visible
+        $global:LockVaultAppCalled = $false
+        & $tickHandler
+        Assert-True (-not $global:LockVaultAppCalled) "Lock-VaultApp was not called when idle for less than 5 minutes"
+
+        # Case C: Idle time >= 5 minutes AND mainGrid is NOT Visible -> should NOT lock vault
+        $script:LastActivityTime = [DateTime]::Now.AddMinutes(-6)
+        $mainGrid.Visibility = [System.Windows.Visibility]::Collapsed
+        $global:LockVaultAppCalled = $false
+        & $tickHandler
+        Assert-True (-not $global:LockVaultAppCalled) "Lock-VaultApp was not called when mainGrid is collapsed"
+
+        # Verify Stop-AutoLockTimer stops the timer
+        Assert-True (-not $script:AutoLockTimer.StopCalled) "Stop() has not been called on timer yet"
+        & $stopSb
+        Assert-True $script:AutoLockTimer.StopCalled "Stop-AutoLockTimer stopped the active timer"
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 3: Start-AutoLockTimer and Stop-AutoLockTimer Mechanics"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 3: Start-AutoLockTimer and Stop-AutoLockTimer Mechanics - $_"
+    }
+
     return $results
 }
 
