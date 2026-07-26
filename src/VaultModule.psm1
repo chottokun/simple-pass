@@ -320,4 +320,4 @@ function Export-VaultToCsv {
     $exportObjects | Export-Csv -Path $Path -NoTypeInformation -Encoding UTF8 -Force
 }
 
-Export-ModuleMember -Function Get-DefaultVaultPath, Test-VaultExists, Save-Vault, Load-Vault, New-VaultEntry, Search-VaultEntries, Export-VaultToCsv, Format-VaultUrl, Move-VaultEntryUp, Move-VaultEntryDown, Move-VaultEntryToTop
+Export-ModuleMember -Function Get-DefaultVaultPath, Test-VaultExists, Save-Vault, Load-Vault, New-VaultEntry, Search-VaultEntries, Export-VaultToCsv, Format-VaultUrl, Move-VaultEntryUp, Move-VaultEntryDown, Move-VaultEntryToTop, Get-ObjectPropertyValue

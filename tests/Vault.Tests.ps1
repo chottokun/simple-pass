@@ -292,6 +292,47 @@ function Run-VaultTests {
     } catch {
         $results.Failed++
         $results.Log += "[FAIL] Test 13: Test-VaultExists validation - $_"
+    }
+
+    # Test 14: Get-ObjectPropertyValue tests (Coverage Improvement)
+    try {
+        # 14a: Null object input
+        $nullVal = Get-ObjectPropertyValue -obj $null -propName "anyProp"
+        Assert-True ($nullVal -eq "") "Null object input returns empty string"
+
+        # 14b: PSCustomObject
+        $psObj = [PSCustomObject]@{
+            testKey    = "testVal"
+            nullKey    = $null
+            intKey     = 42
+        }
+        Assert-True ((Get-ObjectPropertyValue -obj $psObj -propName "testKey") -eq "testVal") "PSCustomObject valid string property"
+        Assert-True ((Get-ObjectPropertyValue -obj $psObj -propName "nullKey") -eq "") "PSCustomObject null property value returns empty string"
+        Assert-True ((Get-ObjectPropertyValue -obj $psObj -propName "nonExistent") -eq "") "PSCustomObject non-existent property returns empty string"
+        Assert-True ((Get-ObjectPropertyValue -obj $psObj -propName "intKey") -eq "42") "PSCustomObject non-string value converted to string"
+
+        # 14c: Hashtable
+        $hash = @{
+            hashKey   = "hashVal"
+            nullKey   = $null
+            boolKey   = $true
+        }
+        Assert-True ((Get-ObjectPropertyValue -obj $hash -propName "hashKey") -eq "hashVal") "Hashtable valid string property"
+        Assert-True ((Get-ObjectPropertyValue -obj $hash -propName "nullKey") -eq "") "Hashtable null value returns empty string"
+        Assert-True ((Get-ObjectPropertyValue -obj $hash -propName "nonExistent") -eq "") "Hashtable non-existent key returns empty string"
+        Assert-True ((Get-ObjectPropertyValue -obj $hash -propName "boolKey") -eq "True") "Hashtable boolean value converted to string"
+
+        # 14d: Standard .NET Object
+        $uri = [System.Uri]::new("https://github.com/abc")
+        Assert-True ((Get-ObjectPropertyValue -obj $uri -propName "Host") -eq "github.com") "Standard .NET object valid string property"
+        Assert-True ((Get-ObjectPropertyValue -obj $uri -propName "NonExistentProp") -eq "") "Standard .NET object non-existent property returns empty string"
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 14: Get-ObjectPropertyValue coverage and correctness"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 14: Get-ObjectPropertyValue - $_"
+    }
     } finally {
         if (Test-Path $tempFile) {
             Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
