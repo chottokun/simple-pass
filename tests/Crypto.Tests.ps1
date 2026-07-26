@@ -548,6 +548,123 @@ function Run-CryptoTests {
         $results.Log += "[FAIL] Test 21: AES Encryption Cryptographic Parameter Validations - $_"
     }
 
+    # Test 7: DPAPI Protection and Unprotection (Platform-conditional Behavior)
+    try {
+        $isWindowsPlatform = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
+        if ($isWindowsPlatform) {
+            $originalBytes = [byte[]](65, 66, 67, 68) # "ABCD"
+            $protectedBytes = Protect-DataWithDpapi -Data $originalBytes
+            Assert-True ($null -ne $protectedBytes) "DPAPI protected data is not null"
+            Assert-True ($protectedBytes.Length -gt 0) "DPAPI protected data has length > 0"
+
+            # Ensure protected data is actually encrypted/different
+            $isSame = $true
+            if ($protectedBytes.Length -eq $originalBytes.Length) {
+                $isSame = $true
+                for ($i = 0; $i -lt $originalBytes.Length; $i++) {
+                    if ($protectedBytes[$i] -ne $originalBytes[$i]) {
+                        $isSame = $false
+                        break
+                    }
+                }
+            } else {
+                $isSame = $false
+            }
+            Assert-True (-not $isSame) "DPAPI protected bytes are different from original bytes"
+
+            $unprotectedBytes = Unprotect-DataWithDpapi -EncryptedData $protectedBytes
+            Assert-True ($null -ne $unprotectedBytes) "DPAPI unprotected data is not null"
+            Assert-True ($unprotectedBytes.Length -eq $originalBytes.Length) "DPAPI unprotected length matches original"
+            for ($i = 0; $i -lt $originalBytes.Length; $i++) {
+                Assert-True ($unprotectedBytes[$i] -eq $originalBytes[$i]) "Byte at index $i matches original"
+            }
+        } else {
+            # On non-Windows, calling DPAPI should throw PlatformNotSupportedException or MethodInvocationException wrapping it
+            $thrownProtect = $false
+            try {
+                $dummy = Protect-DataWithDpapi -Data ([byte[]]@(1, 2, 3))
+            } catch {
+                $thrownProtect = $true
+                Assert-True ($_.Exception.Message -like "*platform*" -or $_.Exception.InnerException.Message -like "*platform*") "Expected platform-not-supported error message"
+            }
+            Assert-True $thrownProtect "Protect-DataWithDpapi throws platform-not-supported exception on non-Windows"
+
+            $thrownUnprotect = $false
+            try {
+                $dummy = Unprotect-DataWithDpapi -EncryptedData ([byte[]]@(1, 2, 3))
+            } catch {
+                $thrownUnprotect = $true
+                Assert-True ($_.Exception.Message -like "*platform*" -or $_.Exception.InnerException.Message -like "*platform*") "Expected platform-not-supported error message"
+            }
+            Assert-True $thrownUnprotect "Unprotect-DataWithDpapi throws platform-not-supported exception on non-Windows"
+        }
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 7: DPAPI Protection and Unprotection (Platform-conditional Behavior)"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 7: DPAPI Protection and Unprotection - $_"
+    }
+
+    # Test 8: DPAPI Edge Cases (Platform-conditional Behavior)
+    try {
+        $isWindowsPlatform = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
+        if ($isWindowsPlatform) {
+            # 1. Null argument checks should throw ArgumentNullException or similar
+            $thrownNullProtect = $false
+            try {
+                $dummy = Protect-DataWithDpapi -Data $null
+            } catch {
+                $thrownNullProtect = $true
+            }
+            Assert-True $thrownNullProtect "Protect-DataWithDpapi with null input throws exception"
+
+            $thrownNullUnprotect = $false
+            try {
+                $dummy = Unprotect-DataWithDpapi -EncryptedData $null
+            } catch {
+                $thrownNullUnprotect = $true
+            }
+            Assert-True $thrownNullUnprotect "Unprotect-DataWithDpapi with null input throws exception"
+
+            # 2. Invalid/tampered bytes decryption should throw CryptographicException
+            $invalidBytes = [byte[]](9, 9, 9, 9, 9, 9, 9, 9)
+            $thrownInvalidUnprotect = $false
+            try {
+                $dummy = Unprotect-DataWithDpapi -EncryptedData $invalidBytes
+            } catch {
+                $thrownInvalidUnprotect = $true
+                Assert-True ($_.Exception.GetType().FullName -like "*Cryptographic*" -or $_.Exception.InnerException.GetType().FullName -like "*Cryptographic*") "Expected CryptographicException"
+            }
+            Assert-True $thrownInvalidUnprotect "Unprotect-DataWithDpapi with invalid/tampered bytes throws CryptographicException"
+        } else {
+            # On non-Windows, calling DPAPI even with null should throw PlatformNotSupportedException
+            $thrownNullProtect = $false
+            try {
+                $dummy = Protect-DataWithDpapi -Data $null
+            } catch {
+                $thrownNullProtect = $true
+                Assert-True ($_.Exception.Message -like "*platform*" -or $_.Exception.InnerException.Message -like "*platform*") "Expected platform-not-supported error message"
+            }
+            Assert-True $thrownNullProtect "Protect-DataWithDpapi with null throws platform-not-supported exception on non-Windows"
+
+            $thrownNullUnprotect = $false
+            try {
+                $dummy = Unprotect-DataWithDpapi -EncryptedData $null
+            } catch {
+                $thrownNullUnprotect = $true
+                Assert-True ($_.Exception.Message -like "*platform*" -or $_.Exception.InnerException.Message -like "*platform*") "Expected platform-not-supported error message"
+            }
+            Assert-True $thrownNullUnprotect "Unprotect-DataWithDpapi with null throws platform-not-supported exception on non-Windows"
+        }
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 8: DPAPI Edge Cases (Platform-conditional Behavior)"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 8: DPAPI Edge Cases - $_"
+    }
+
     return $results
 }
 
