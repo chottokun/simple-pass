@@ -332,6 +332,44 @@ function Run-VaultTests {
     } catch {
         $results.Failed++
         $results.Log += "[FAIL] Test 14: Get-ObjectPropertyValue - $_"
+    }
+
+    # Test 15: Critical Property Resilience in Search and Export with incomplete objects/hashtables
+    try {
+        # Entry with missing properties (e.g. only title and password)
+        $partialObj = [PSCustomObject]@{
+            title    = "PartialSite"
+            password = "SecretPassword"
+        }
+        $partialHash = @{
+            title    = "HashSite"
+            username = "hashuser"
+        }
+
+        # Search-VaultEntries with partial entries
+        $searchResults = Search-VaultEntries -Entries @($partialObj, $partialHash) -Keyword "site"
+        Assert-True ($searchResults.Count -eq 2) "Search matches both partial object and hashtable"
+
+        # Search for keyword present in missing field
+        $searchNoMatch = Search-VaultEntries -Entries @($partialObj, $partialHash) -Keyword "nonexistent"
+        Assert-True ($searchNoMatch.Count -eq 0) "Search handles missing fields gracefully without throwing errors"
+
+        # Export-VaultToCsv with partial entries
+        $tempCsv = [System.IO.Path]::GetTempFileName() + ".csv"
+        try {
+            Export-VaultToCsv -Entries @($partialObj, $partialHash) -Path $tempCsv
+            Assert-True (Test-Path $tempCsv) "CSV Export created successfully with partial entries"
+            $csvLines = Get-Content -Path $tempCsv -Encoding UTF8
+            Assert-True ($csvLines.Count -ge 3) "CSV file contains header and 2 data rows"
+        } finally {
+            if (Test-Path $tempCsv) { Remove-Item $tempCsv -Force -ErrorAction SilentlyContinue }
+        }
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 15: Critical Property Resilience with incomplete entry objects and hashtables"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 15: Critical Property Resilience - $_"
     } finally {
         if (Test-Path $tempFile) {
             Remove-Item $tempFile -Force -ErrorAction SilentlyContinue

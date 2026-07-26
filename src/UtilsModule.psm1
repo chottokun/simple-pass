@@ -101,16 +101,22 @@ function Set-ClipboardWithAutoClear {
         [int]$ClearAfterSeconds = 30
     )
     
-    # Try WPF Clipboard first, fallback to Windows Forms
+    # Try WPF Clipboard first, fallback to Windows Forms with retry resilience for transient lock handling
     $setSuccess = $false
-    try {
-        [System.Windows.Clipboard]::SetText($Text)
-        $setSuccess = $true
-    } catch {
+    for ($retry = 0; $retry -lt 3; $retry++) {
         try {
-            [System.Windows.Forms.Clipboard]::SetText($Text)
+            [System.Windows.Clipboard]::SetText($Text)
             $setSuccess = $true
-        } catch {}
+            break
+        } catch {
+            try {
+                [System.Windows.Forms.Clipboard]::SetText($Text)
+                $setSuccess = $true
+                break
+            } catch {
+                Start-Sleep -Milliseconds 50
+            }
+        }
     }
 
     if ($ClearAfterSeconds -gt 0 -and $setSuccess) {
