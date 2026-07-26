@@ -224,6 +224,19 @@ function Run-VaultTests {
         $secUrl3 = Format-VaultUrl -Url "https://valid-site.com"
         Assert-True ($secUrl3 -eq "https://valid-site.com") "Allows valid https:// scheme"
 
+        # Additional URL injection and unsafe character tests
+        $secUrl4 = Format-VaultUrl -Url "https://valid-site.com/search?q=foo bar"
+        Assert-True ($secUrl4 -eq "") "Rejects URLs containing whitespace"
+
+        $secUrl5 = Format-VaultUrl -Url "https://valid-site.com/search?q=foo'bar"
+        Assert-True ($secUrl5 -eq "https://valid-site.com/search?q=foo'bar") "Allows URLs containing single quote (as per RFC 3986 sub-delims)"
+
+        $secUrl6 = Format-VaultUrl -Url 'https://valid-site.com/search?q=foo"bar'
+        Assert-True ($secUrl6 -eq "") "Rejects URLs containing double quote"
+
+        $secUrl7 = Format-VaultUrl -Url 'https://valid-site.com/search?q=foo`bar'
+        Assert-True ($secUrl7 -eq "") "Rejects URLs containing backtick"
+
         $results.Passed++
         $results.Log += "[PASS] Test 11: TDD - URL Protocol Whitelist Security Test"
     } catch {

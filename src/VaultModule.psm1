@@ -104,8 +104,8 @@ function Format-VaultUrl {
     }
     $trimmed = $Url.Trim()
 
-    # Reject inherently unsafe / dangerous pseudo-protocols
-    if ($trimmed -match "^(javascript|file|data|vbscript|cmd|powershell|ms-settings|about):" -or $trimmed -match "^\s*\\\\") {
+    # Reject inherently unsafe / dangerous pseudo-protocols and unsafe characters
+    if ($trimmed -match "^(javascript|file|data|vbscript|cmd|powershell|ms-settings|about):" -or $trimmed -match "^\s*\\\\" -or $trimmed -match '[\s"`]') {
         return ""
     }
 
