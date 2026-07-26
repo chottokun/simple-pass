@@ -410,7 +410,7 @@ function Run-CryptoTests {
         $results.Log += "[FAIL] Test 17: Derive-KeyIVAndHmac Iterations Sensitivity - $_"
     }
 
-    # Test 7: Direct AES Round-trip Encryption & Decryption (Protect-DataWithAes & Unprotect-DataWithAes)
+    # Test 18: Direct AES Round-trip Encryption & Decryption (Protect-DataWithAes & Unprotect-DataWithAes)
     try {
         $plainText = "This is a highly secret credential string to protect 12345!"
         $aesKey = New-Object byte[] 32
@@ -429,16 +429,16 @@ function Run-CryptoTests {
         Assert-True ($decrypted -eq $plainText) "Decrypted text matches the original plaintext"
 
         $results.Passed++
-        $results.Log += "[PASS] Test 7: Direct AES Round-trip Encryption & Decryption"
+        $results.Log += "[PASS] Test 18: Direct AES Round-trip Encryption & Decryption"
     } catch {
         $results.Failed++
-        $results.Log += "[FAIL] Test 7: Direct AES Round-trip Encryption & Decryption - $_"
+        $results.Log += "[FAIL] Test 18: Direct AES Round-trip Encryption & Decryption - $_"
     }
 
-    # Test 8: Protect-DataWithAes Handling of Special Characters and Empty/Blank Inputs
+    # Test 19: Protect-DataWithAes Handling of Special Characters and Empty/Blank Inputs
     try {
         $specialTexts = @(
-            "日本語の文字とEmoji 🔐🔑✨",
+            "譌･譛ｬ隱槭・譁・ｭ励→Emoji 柏泊笨ｨ",
             "   "
         )
         $aesKey = New-Object byte[] 32
@@ -465,13 +465,13 @@ function Run-CryptoTests {
         Assert-True $emptyStringThrew "Protect-DataWithAes correctly throws when PlainText is an empty string"
 
         $results.Passed++
-        $results.Log += "[PASS] Test 8: Protect-DataWithAes Special Characters & Empty Inputs"
+        $results.Log += "[PASS] Test 19: Protect-DataWithAes Special Characters & Empty Inputs"
     } catch {
         $results.Failed++
-        $results.Log += "[FAIL] Test 8: Protect-DataWithAes Special Characters & Empty Inputs - $_"
+        $results.Log += "[FAIL] Test 19: Protect-DataWithAes Special Characters & Empty Inputs - $_"
     }
 
-    # Test 9: AES Encryption Uniqueness (Different IVs produce different ciphertexts)
+    # Test 20: AES Encryption Uniqueness (Different IVs produce different ciphertexts)
     try {
         $plainText = "Consistent plaintext that will be encrypted twice"
         $aesKey = New-Object byte[] 32
@@ -495,13 +495,13 @@ function Run-CryptoTests {
 
         Assert-True ($hex1 -ne $hex2) "Ciphertexts encrypted with different IVs must be different"
         $results.Passed++
-        $results.Log += "[PASS] Test 9: AES Encryption Uniqueness with different IVs"
+        $results.Log += "[PASS] Test 20: AES Encryption Uniqueness with different IVs"
     } catch {
         $results.Failed++
-        $results.Log += "[FAIL] Test 9: AES Encryption Uniqueness - $_"
+        $results.Log += "[FAIL] Test 20: AES Encryption Uniqueness - $_"
     }
 
-    # Test 10: AES Error Handling (Incorrect Key/IV Sizes)
+    # Test 21: AES Error Handling (Incorrect Key/IV Sizes)
     try {
         $plainText = "Some plaintext"
         $correctKey = New-Object byte[] 32
@@ -542,10 +542,10 @@ function Run-CryptoTests {
         Assert-True $unprotectIVError "Unprotect-DataWithAes throws exception when IV size is invalid"
 
         $results.Passed++
-        $results.Log += "[PASS] Test 10: AES Encryption Cryptographic Parameter Validations"
+        $results.Log += "[PASS] Test 21: AES Encryption Cryptographic Parameter Validations"
     } catch {
         $results.Failed++
-        $results.Log += "[FAIL] Test 10: AES Encryption Cryptographic Parameter Validations - $_"
+        $results.Log += "[FAIL] Test 21: AES Encryption Cryptographic Parameter Validations - $_"
     }
 
     return $results
