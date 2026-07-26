@@ -526,11 +526,14 @@ $window.AddHandler([System.Windows.Documents.Hyperlink]::RequestNavigateEvent, [
     try {
         $rawUrl = $e.Uri.OriginalString
         $targetUrl = Format-VaultUrl -Url $rawUrl
-        if ([string]::IsNullOrWhiteSpace($targetUrl) -or $targetUrl -notmatch "^https?://") {
+        if ([string]::IsNullOrWhiteSpace($targetUrl) -or $targetUrl -notmatch "^https?://" -or $targetUrl -match '[\s"''`]') {
             [System.Windows.MessageBox]::Show("Opening this URL is blocked for security reasons. Only http:// and https:// URLs are allowed.", "Security Warning", "OK", "Warning") | Out-Null
             Write-AppLog -Level WARN -Message "Blocked launching unsafe URL: $rawUrl"
         } else {
-            [System.Diagnostics.Process]::Start($targetUrl) | Out-Null
+            $psi = New-Object System.Diagnostics.ProcessStartInfo
+            $psi.FileName = $targetUrl
+            $psi.UseShellExecute = $true
+            [System.Diagnostics.Process]::Start($psi) | Out-Null
             $txtStatus.Text = "Opened URL in browser: $targetUrl"
             Write-AppLog -Level INFO -Message "Opened URL in default browser: $targetUrl"
         }
