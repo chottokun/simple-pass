@@ -17,21 +17,68 @@ function Run-GuiJpTests {
 
     $results = @{ Passed = 0; Failed = 0; Log = @() }
 
-    # Test 1: SimplePASS_JP.ps1 XAML Parsing & Control Binding
+    # Test 1: SimplePASS_JP.ps1 and SimplePASS.ps1 Japanese XAML Parsing & Control Binding
     try {
         $jpScript = Join-Path $srcDir "SimplePASS_JP.ps1"
-        Assert-True (Test-Path $jpScript) "SimplePASS_JP.ps1 exists"
+        Assert-True (Test-Path $jpScript) "SimplePASS_JP.ps1 wrapper exists"
 
-        $scriptContent = [System.IO.File]::ReadAllText($jpScript, [System.Text.Encoding]::UTF8)
+        $mainScript = Join-Path $srcDir "SimplePASS.ps1"
+        Assert-True (Test-Path $mainScript) "SimplePASS.ps1 exists"
+
+        $scriptContent = [System.IO.File]::ReadAllText($mainScript, [System.Text.Encoding]::UTF8)
         $xamlMatch = [regex]::Match($scriptContent, '(?s)\[xml\]\$xaml\s*=\s*@"(.*?)"@')
-        Assert-True $xamlMatch.Success "XAML string extracted from SimplePASS_JP.ps1"
+        Assert-True $xamlMatch.Success "XAML string template extracted from SimplePASS.ps1"
 
-        $xamlStr = $xamlMatch.Groups[1].Value
-        [xml]$xmlObj = $xamlStr
+        # Mock Japanese Resource Dictionary
+        $res = [PSCustomObject]@{
+            Title = "SimplePASS - パスワード管理ツール"
+            Width = 900
+            FontFamily = "Meiryo, Segoe UI"
+            LoginSubtitle = "マスターパスワードを入力して保管庫を解除してください"
+            LoginPasswordLabel = "マスターパスワード:"
+            LoginButtonUnlock = "保管庫の解除"
+            SearchTooltip = "タイトル、URL、ユーザー名、メモをリアルタイム検索..."
+            BtnAddEntry = "+ 新規エントリ追加"
+            BtnExportCsv = "📥 CSV出力"
+            BtnChangePass = "🔑 パスワード変更"
+            BtnLock = "保管庫をロック"
+            ColTop = "最上部"
+            ColTitle = "タイトル"
+            ColUser = "ユーザー名 / ID"
+            ColUrl = "URL"
+            ColNote = "メモ"
+            ColActions = "操作"
+            BtnCopyPass = "PASSコピー"
+            BtnCopyUser = "IDコピー"
+            BtnEdit = "編集"
+            BtnDelete = "削除"
+            ReadyStatus = "準備完了"
+            ModalTitleEdit = "エントリの編集"
+            LabelFormTitle = "タイトル / サービス名:"
+            LabelFormUrl = "URL:"
+            LabelFormUsername = "ユーザー名 / ID:"
+            LabelFormPassword = "パスワード:"
+            BtnGeneratePass = "⚡ ランダム生成"
+            LabelFormNote = "メモ:"
+            BtnSave = "保存"
+            BtnCancel = "キャンセル"
+            ModalTitleChangePass = "マスターパスワードの変更"
+            LabelCurrentPass = "現在のマスターパスワード:"
+            LabelNewPass = "新しいマスターパスワード:"
+            LabelConfirmNewPass = "新しいマスターパスワード (確認):"
+            BtnChangeExec = "変更実行"
+            BtnCancelModal = "キャンセル"
+        }
+
+        # Expand the XAML with the mock Japanese resources
+        $xamlTemplate = $xamlMatch.Groups[1].Value
+        $expandedXaml = $ExecutionContext.InvokeCommand.ExpandString($xamlTemplate)
+
+        [xml]$xmlObj = $expandedXaml
         $reader = (New-Object System.Xml.XmlNodeReader $xmlObj)
         $windowObj = [Windows.Markup.XamlReader]::Load($reader)
 
-        Assert-True ($null -ne $windowObj) "SimplePASS_JP XAML loaded without XamlParseException"
+        Assert-True ($null -ne $windowObj) "SimplePASS Japanese XAML loaded without XamlParseException"
         Assert-True ($windowObj.Title.StartsWith("SimplePASS")) "Japanese Window Title loaded"
         Assert-True ($null -ne $windowObj.FindName("LoginPanel")) "LoginPanel found in JP edition"
         Assert-True ($null -ne $windowObj.FindName("DgEntries")) "DgEntries found in JP edition"
@@ -61,13 +108,13 @@ function Run-GuiJpTests {
             Add-Type -TypeDefinition $definition -ErrorAction SilentlyContinue
         }
 
-        $jpScript = Join-Path $srcDir "SimplePASS_JP.ps1"
-        $scriptContent = [System.IO.File]::ReadAllText($jpScript, [System.Text.Encoding]::UTF8)
+        $mainScript = Join-Path $srcDir "SimplePASS.ps1"
+        $scriptContent = [System.IO.File]::ReadAllText($mainScript, [System.Text.Encoding]::UTF8)
 
-        # Parse SimplePASS_JP.ps1 and extract Lock-VaultApp function body
+        # Parse SimplePASS.ps1 and extract Lock-VaultApp function body
         $ast = [System.Management.Automation.Language.Parser]::ParseInput($scriptContent, [ref]$null, [ref]$null)
         $funcAst = $ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Lock-VaultApp' }, $true)[0]
-        Assert-True ($null -ne $funcAst) "Lock-VaultApp function AST successfully extracted"
+        Assert-True ($null -ne $funcAst) "Lock-VaultApp function AST successfully extracted from SimplePASS.ps1"
         $sb = $funcAst.Body.GetScriptBlock()
 
         # Mock dependent functions
@@ -80,6 +127,11 @@ function Run-GuiJpTests {
         $script:MasterPassword = "MySecretMasterPassword"
         $script:VaultEntries = @("Item1", "Item2")
 
+        # Mock Japanese Resource for default status
+        $res = [PSCustomObject]@{
+            LockStatus = "保管庫をロックしました。"
+        }
+
         # Mock WPF GUI Controls
         $dgEntries = [PSCustomObject]@{ ItemsSource = @("some", "entries") }
         $mainGrid = [PSCustomObject]@{ Visibility = [System.Windows.Visibility]::Visible }
@@ -88,7 +140,7 @@ function Run-GuiJpTests {
         $loginPanel = [PSCustomObject]@{ Visibility = [System.Windows.Visibility]::Collapsed }
         $txtStatus = [PSCustomObject]@{ Text = "Initial State" }
 
-        # Execute Lock-VaultApp
+        # Execute Lock-VaultApp with custom message
         & $sb -StatusText "保管庫をロックしました。(テスト)"
 
         # Assertions
