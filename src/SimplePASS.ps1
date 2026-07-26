@@ -1,6 +1,8 @@
 ﻿# SimplePASS - Main GUI Application
 [CmdletBinding()]
-param()
+param(
+    [string]$Language = "en"
+)
 
 Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName PresentationCore
@@ -15,22 +17,239 @@ Import-Module (Join-Path $scriptDir "VaultModule.psm1") -DisableNameChecking -Fo
 Import-Module (Join-Path $scriptDir "UtilsModule.psm1") -DisableNameChecking -Force
 Import-Module (Join-Path $scriptDir "LoggerModule.psm1") -DisableNameChecking -Force
 
+# --- Localization Resource Dictionaries ---
+$res = if ($Language -eq "ja") {
+    [PSCustomObject]@{
+        # Window & General
+        Title = "SimplePASS - パスワード管理ツール"
+        Width = 900
+        FontFamily = "Meiryo, Segoe UI"
+        AppStartLog = "SimplePASS 日本語版 Application Started."
+        FatalLogMsg = "Unhandled AppDomain Exception (JP)"
+
+        # Login Panel
+        LoginSubtitle = "マスターパスワードを入力して保管庫を解除してください"
+        FirstRunSubtitle = "初回起動を検知しました。マスターパスワードを設定してください。"
+        LoginButtonUnlock = "保管庫の解除"
+        LoginButtonCreate = "保管庫の新規作成"
+        LoginPasswordLabel = "マスターパスワード:"
+        EmptyPassError = "マスターパスワードを入力してください。"
+        LoginFailError = "マスターパスワードが正しくないか、データ破損、または旧v1.0形式です。"
+        CreateFailError = "保管庫の作成に失敗しました: "
+        FirstRunSuccessStatus = "マスターパスワードが登録され、保管庫が初期化されました。"
+        UnlockSuccessStatus = "認証成功: {0} 件のエントリを読み込みました。"
+        LoginFailLog = "JP Login / Vault creation failed"
+
+        # Main Grid Actions / Search
+        SearchTooltip = "タイトル、URL、ユーザー名、メモをリアルタイム検索..."
+        BtnAddEntry = "+ 新規エントリ追加"
+        BtnExportCsv = "📥 CSV出力"
+        BtnChangePass = "🔑 パスワード変更"
+        BtnLock = "保管庫をロック"
+        ReadyStatus = "準備完了"
+        LockStatus = "保管庫をロックしました。"
+        AutoLockStatus = "5分間無操作のため自動ロックされました。"
+
+        # DataGrid Columns
+        ColTop = "最上部"
+        ColTitle = "タイトル"
+        ColUser = "ユーザー名 / ID"
+        ColUrl = "URL"
+        ColNote = "メモ"
+        ColActions = "操作"
+
+        # Actions inside DataGrid
+        ToolTipMoveTop = "最上部へ固定"
+        BtnCopyPass = "PASSコピー"
+        BtnCopyUser = "IDコピー"
+        BtnEdit = "編集"
+        BtnDelete = "削除"
+        MsgCopiedPass = "パスワードをクリップボードにコピーしました (30秒後に自動クリアされます)。"
+        MsgCopiedPassLog = "Password copied to clipboard (JP)"
+        MsgCopiedUser = "ユーザーIDをクリップボードにコピーしました。"
+        MsgCopiedUserLog = "Username copied to clipboard (JP)"
+        ConfirmDeleteTitle = "削除確認"
+        ConfirmDeleteMsg = "'{0}' を削除してもよろしいですか？"
+        StatusDeleted = "エントリを削除しました。"
+        StatusMovedTop = "エントリを最上部に移動しました。"
+
+        # Add / Edit Modal
+        ModalTitleAdd = "新規パスワード登録"
+        ModalTitleEdit = "エントリの編集"
+        LabelFormTitle = "タイトル / サービス名:"
+        LabelFormUrl = "URL:"
+        LabelFormUsername = "ユーザー名 / ID:"
+        LabelFormPassword = "パスワード:"
+        BtnGeneratePass = "⚡ ランダム生成"
+        LabelFormNote = "メモ:"
+        BtnSave = "保存"
+        BtnCancel = "キャンセル"
+        ValidationErrorTitle = "入力エラー"
+        ValidationErrorMsg = "タイトルを入力してください。"
+        StatusSaved = "エントリを保存しました。 (合計: {0} 件)"
+
+        # Change Master Password Modal
+        ModalTitleChangePass = "マスターパスワードの変更"
+        LabelCurrentPass = "現在のマスターパスワード:"
+        LabelNewPass = "新しいマスターパスワード:"
+        LabelConfirmNewPass = "新しいマスターパスワード (確認):"
+        BtnChangeExec = "変更実行"
+        ErrorCurrentPassIncorrect = "現在のマスターパスワードが正しくありません。"
+        ErrorNewPassEmpty = "新しいマスターパスワードを入力してください。"
+        ErrorConfirmMismatch = "新しいマスターパスワード（確認）が一致しません。"
+        StatusPassChanged = "マスターパスワードを変更しました。"
+        LogPassChanged = "Master Password changed (JP)."
+        ErrorPassChangeFailed = "マスターパスワードの変更に失敗しました: "
+
+        # CSV Export Dialog
+        CsvNoEntriesMsg = "出力できるエントリがありません。"
+        CsvNoEntriesTitle = "CSV出力"
+        CsvWarningTitle = "セキュリティ確認"
+        CsvWarningMsg = "【セキュリティ上の注意】`nエクスポートされるCSVファイルには暗号化されていない平文のパスワードが含まれます。ファイルの使用後は確実に削除するか、安全な場所へ保管してください。`n`nエクスポートを実行しますか？"
+        CsvSaveFilter = "CSVファイル (*.csv)|*.csv|すべてのファイル (*.*)|*.*"
+        CsvSaveTitle = "保管庫エントリをCSVファイルに出力"
+        StatusCsvSuccess = "{0} 件のエントリをCSVファイルに出力しました。"
+        LogCsvSuccess = "Vault entries exported to CSV (JP): "
+        MsgCsvSuccess = "CSV出力が正常に完了しました。"
+        MsgCsvSuccessTitle = "CSV出力完了"
+        LogCsvFailed = "JP CSV Export failed"
+        MsgCsvFailed = "CSV出力に失敗しました: "
+        MsgCsvFailedTitle = "出力エラー"
+
+        # URL Security
+        UrlBlockMsg = "セキュリティ上の理由により、このURLの起動はブロックされました。http:// および https:// のURLのみ許可されています。"
+        UrlBlockTitle = "セキュリティ警告"
+        LogUrlBlocked = "Blocked launching unsafe URL (JP): "
+        StatusUrlOpened = "ブラウザでURLを開きました: {0}"
+        LogUrlOpened = "Opened URL in default browser (JP): {0}"
+        LogUrlOpenFailed = "Failed to open URL in browser (JP)"
+        StatusUrlOpenFailed = "URLの起動に失敗しました: {0}"
+    }
+} else {
+    [PSCustomObject]@{
+        # Window & General
+        Title = "SimplePASS - Password Manager"
+        Width = 880
+        FontFamily = "Segoe UI"
+        AppStartLog = "SimplePASS Application Started."
+        FatalLogMsg = "Unhandled AppDomain Exception"
+
+        # Login Panel
+        LoginSubtitle = "Enter your Master Password to unlock"
+        FirstRunSubtitle = "First run detected. Create your Master Password."
+        LoginButtonUnlock = "Unlock Vault"
+        LoginButtonCreate = "Create Vault"
+        LoginPasswordLabel = "Master Password:"
+        EmptyPassError = "Please enter a Master Password."
+        LoginFailError = "Invalid Master Password, corrupt data, or legacy v1.0 vault format."
+        CreateFailError = "Failed to create Vault: "
+        FirstRunSuccessStatus = "Master Password created successfully. Vault initialized."
+        UnlockSuccessStatus = "Authenticated successfully. Loaded {0} entries."
+        LoginFailLog = "Login / Vault creation failed"
+
+        # Main Grid Actions / Search
+        SearchTooltip = "Search title, URL, username..."
+        BtnAddEntry = "+ Add Entry"
+        BtnExportCsv = "📥 Export CSV"
+        BtnChangePass = "🔑 Change Master Pass"
+        BtnLock = "Lock Vault"
+        ReadyStatus = "Ready"
+        LockStatus = "Vault locked."
+        AutoLockStatus = "Auto-locked due to 5 minutes of inactivity."
+
+        # DataGrid Columns
+        ColTop = "Top"
+        ColTitle = "Title"
+        ColUser = "Username"
+        ColUrl = "URL"
+        ColNote = "Note"
+        ColActions = "Actions"
+
+        # Actions inside DataGrid
+        ToolTipMoveTop = "Move to Top"
+        BtnCopyPass = "Copy Pass"
+        BtnCopyUser = "Copy User"
+        BtnEdit = "Edit"
+        BtnDelete = "Delete"
+        MsgCopiedPass = "Password copied to clipboard (Auto-clears in 30s)."
+        MsgCopiedPassLog = "Password copied to clipboard."
+        MsgCopiedUser = "Username copied to clipboard."
+        MsgCopiedUserLog = "Username copied to clipboard."
+        ConfirmDeleteTitle = "Confirm Delete"
+        ConfirmDeleteMsg = "Are you sure you want to delete '{0}'?"
+        StatusDeleted = "Entry deleted."
+        StatusMovedTop = "Entry moved to top."
+
+        # Add / Edit Modal
+        ModalTitleAdd = "New Password Entry"
+        ModalTitleEdit = "Edit Entry"
+        LabelFormTitle = "Title / Service Name:"
+        LabelFormUrl = "URL:"
+        LabelFormUsername = "Username / ID:"
+        LabelFormPassword = "Password:"
+        BtnGeneratePass = "Generate"
+        LabelFormNote = "Note:"
+        BtnSave = "Save"
+        BtnCancel = "Cancel"
+        ValidationErrorTitle = "Validation Error"
+        ValidationErrorMsg = "Please enter a title."
+        StatusSaved = "Entry saved. (Total: {0})"
+
+        # Change Master Password Modal
+        ModalTitleChangePass = "Change Master Password"
+        LabelCurrentPass = "Current Master Password:"
+        LabelNewPass = "New Master Password:"
+        LabelConfirmNewPass = "Confirm New Master Password:"
+        BtnChangeExec = "Change"
+        ErrorCurrentPassIncorrect = "Current Master Password is incorrect."
+        ErrorNewPassEmpty = "New Master Password cannot be empty."
+        ErrorConfirmMismatch = "New Master Password confirmation does not match."
+        StatusPassChanged = "Master Password updated successfully."
+        LogPassChanged = "Master Password changed."
+        ErrorPassChangeFailed = "Failed to update Master Password: "
+
+        # CSV Export Dialog
+        CsvNoEntriesMsg = "No entries available to export."
+        CsvNoEntriesTitle = "Export CSV"
+        CsvWarningTitle = "Security Warning"
+        CsvWarningMsg = "Security Warning: Exported CSV files contain unencrypted plaintext passwords. Ensure you store or delete the file securely after use.`n`nDo you wish to proceed?"
+        CsvSaveFilter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*"
+        CsvSaveTitle = "Export Vault Entries to CSV"
+        StatusCsvSuccess = "Exported {0} entries to CSV successfully."
+        LogCsvSuccess = "Vault entries exported to CSV: "
+        MsgCsvSuccess = "CSV export completed successfully."
+        MsgCsvSuccessTitle = "Export CSV"
+        LogCsvFailed = "CSV Export failed"
+        MsgCsvFailed = "Failed to export CSV: "
+        MsgCsvFailedTitle = "Export Error"
+
+        # URL Security
+        UrlBlockMsg = "Opening this URL is blocked for security reasons. Only http:// and https:// URLs are allowed."
+        UrlBlockTitle = "Security Warning"
+        LogUrlBlocked = "Blocked launching unsafe URL: "
+        StatusUrlOpened = "Opened URL in browser: {0}"
+        LogUrlOpened = "Opened URL in default browser: {0}"
+        LogUrlOpenFailed = "Failed to open URL in browser"
+        StatusUrlOpenFailed = "Failed to open URL: {0}"
+    }
+}
+
 # --- App-wide Exception & Log Management ---
 [System.AppDomain]::CurrentDomain.add_UnhandledException([System.UnhandledExceptionEventHandler]{
     param($sender, $e)
     if ($e.ExceptionObject -is [System.Exception]) {
-        Write-AppLog -Level FATAL -Message "Unhandled AppDomain Exception" -Exception $e.ExceptionObject
+        Write-AppLog -Level FATAL -Message $res.FatalLogMsg -Exception $e.ExceptionObject
     }
 })
 
-Write-AppLog -Level INFO -Message "SimplePASS Application Started."
+Write-AppLog -Level INFO -Message $res.AppStartLog
 
 # --- XAML UI Definition ---
 [xml]$xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="SimplePASS - Password Manager" Height="580" Width="880"
-        WindowStartupLocation="CenterScreen" Background="#F4F5F7" FontFamily="Segoe UI">
+        Title="$($res.Title)" Height="580" Width="$($res.Width)"
+        WindowStartupLocation="CenterScreen" Background="#F4F5F7" FontFamily="$($res.FontFamily)">
     <Grid>
         <!-- Login Panel -->
         <Border x:Name="LoginPanel" Background="#FFFFFF" Width="420" Height="330"
@@ -40,12 +259,12 @@ Write-AppLog -Level INFO -Message "SimplePASS Application Started."
             </Border.Effect>
             <StackPanel Margin="30">
                 <TextBlock Text="SimplePASS" FontSize="26" FontWeight="Bold" Foreground="#2C3E50" HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                <TextBlock x:Name="TxtLoginSubtitle" Text="Enter your Master Password to unlock" FontSize="13" Foreground="#7F8C8D" HorizontalAlignment="Center" Margin="0,0,0,25"/>
+                <TextBlock x:Name="TxtLoginSubtitle" Text="$($res.LoginSubtitle)" FontSize="13" Foreground="#7F8C8D" HorizontalAlignment="Center" Margin="0,0,0,25" TextWrapping="Wrap"/>
 
-                <TextBlock Text="Master Password:" FontSize="13" FontWeight="SemiBold" Foreground="#34495E" Margin="0,0,0,5"/>
+                <TextBlock Text="$($res.LoginPasswordLabel)" FontSize="13" FontWeight="SemiBold" Foreground="#34495E" Margin="0,0,0,5"/>
                 <PasswordBox x:Name="PbMasterPassword" Height="38" FontSize="16" Padding="5" Margin="0,0,0,20"/>
 
-                <Button x:Name="BtnLogin" Content="Unlock Vault" Height="40" Background="#3498DB" Foreground="White"
+                <Button x:Name="BtnLogin" Content="$($res.LoginButtonUnlock)" Height="40" Background="#3498DB" Foreground="White"
                         FontSize="15" FontWeight="Bold" Cursor="Hand" BorderThickness="0">
                     <Button.Resources>
                         <Style TargetType="Border">
@@ -75,14 +294,14 @@ Write-AppLog -Level INFO -Message "SimplePASS Application Started."
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBox x:Name="TxtSearch" Grid.Column="0" Height="35" FontSize="14" Padding="8,5" VerticalContentAlignment="Center"
-                         ToolTip="Search title, URL, username..."/>
-                <Button x:Name="BtnAddEntry" Grid.Column="1" Content="+ Add Entry" Height="35" Width="100" Margin="10,0,0,0"
+                         ToolTip="$($res.SearchTooltip)"/>
+                <Button x:Name="BtnAddEntry" Grid.Column="1" Content="$($res.BtnAddEntry)" Height="35" Width="135" Margin="10,0,0,0"
                         Background="#2ECC71" Foreground="White" FontWeight="Bold" Cursor="Hand" BorderThickness="0"/>
-                <Button x:Name="BtnExportCsv" Grid.Column="2" Content="📥 Export CSV" Height="35" Width="110" Margin="10,0,0,0"
+                <Button x:Name="BtnExportCsv" Grid.Column="2" Content="$($res.BtnExportCsv)" Height="35" Width="110" Margin="10,0,0,0"
                         Background="#34495E" Foreground="White" FontWeight="Bold" Cursor="Hand" BorderThickness="0"/>
-                <Button x:Name="BtnChangePass" Grid.Column="3" Content="🔑 Change Master Pass" Height="35" Width="160" Margin="10,0,0,0"
+                <Button x:Name="BtnChangePass" Grid.Column="3" Content="$($res.BtnChangePass)" Height="35" Width="145" Margin="10,0,0,0"
                         Background="#F39C12" Foreground="White" FontWeight="Bold" Cursor="Hand" BorderThickness="0"/>
-                <Button x:Name="BtnLock" Grid.Column="4" Content="Lock Vault" Height="35" Width="90" Margin="10,0,0,0"
+                <Button x:Name="BtnLock" Grid.Column="4" Content="$($res.BtnLock)" Height="35" Width="110" Margin="10,0,0,0"
                         Background="#E74C3C" Foreground="White" FontWeight="Bold" Cursor="Hand" BorderThickness="0"/>
             </Grid>
 
@@ -91,16 +310,16 @@ Write-AppLog -Level INFO -Message "SimplePASS Application Started."
                       CanUserAddRows="False" SelectionMode="Single" Background="White" RowHeaderWidth="0" GridLinesVisibility="Horizontal"
                       CanUserSortColumns="True">
                 <DataGrid.Columns>
-                    <DataGridTemplateColumn Header="Top" Width="45">
+                    <DataGridTemplateColumn Header="$($res.ColTop)" Width="50">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <Button Content="🔝" Tag="{Binding}" x:Name="BtnMoveTop" Margin="2,0" Padding="4,1" Background="#2980B9" Foreground="White" BorderThickness="0" ToolTip="Move to Top" FontSize="11" HorizontalAlignment="Center"/>
+                                <Button Content="🔝" Tag="{Binding}" x:Name="BtnMoveTop" Margin="2,0" Padding="4,1" Background="#2980B9" Foreground="White" BorderThickness="0" ToolTip="$($res.ToolTipMoveTop)" FontSize="11" HorizontalAlignment="Center"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="Title" Binding="{Binding title}" Width="140" CanUserSort="True" SortMemberPath="title"/>
-                    <DataGridTextColumn Header="Username" Binding="{Binding username}" Width="140" CanUserSort="True" SortMemberPath="username"/>
-                    <DataGridTemplateColumn Header="URL" Width="170" CanUserSort="True" SortMemberPath="url">
+                    <DataGridTextColumn Header="$($res.ColTitle)" Binding="{Binding title}" Width="140" CanUserSort="True" SortMemberPath="title"/>
+                    <DataGridTextColumn Header="$($res.ColUser)" Binding="{Binding username}" Width="140" CanUserSort="True" SortMemberPath="username"/>
+                    <DataGridTemplateColumn Header="$($res.ColUrl)" Width="170" CanUserSort="True" SortMemberPath="url">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Margin="4,2">
@@ -111,15 +330,15 @@ Write-AppLog -Level INFO -Message "SimplePASS Application Started."
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="Note" Binding="{Binding note}" Width="120"/>
-                    <DataGridTemplateColumn Header="Actions" Width="*">
+                    <DataGridTextColumn Header="$($res.ColNote)" Binding="{Binding note}" Width="120"/>
+                    <DataGridTemplateColumn Header="$($res.ColActions)" Width="*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                                    <Button Content="Copy Pass" Tag="{Binding}" x:Name="BtnCopyPass" Margin="2,2" Padding="6,2" Background="#3498DB" Foreground="White" BorderThickness="0"/>
-                                    <Button Content="Copy User" Tag="{Binding}" x:Name="BtnCopyUser" Margin="2,2" Padding="6,2" Background="#95A5A6" Foreground="White" BorderThickness="0"/>
-                                    <Button Content="Edit" Tag="{Binding}" x:Name="BtnEditEntry" Margin="2,2" Padding="6,2" Background="#F39C12" Foreground="White" BorderThickness="0"/>
-                                    <Button Content="Delete" Tag="{Binding}" x:Name="BtnDeleteEntry" Margin="2,2" Padding="6,2" Background="#E74C3C" Foreground="White" BorderThickness="0"/>
+                                    <Button Content="$($res.BtnCopyPass)" Tag="{Binding}" x:Name="BtnCopyPass" Margin="2,2" Padding="6,2" Background="#3498DB" Foreground="White" BorderThickness="0"/>
+                                    <Button Content="$($res.BtnCopyUser)" Tag="{Binding}" x:Name="BtnCopyUser" Margin="2,2" Padding="6,2" Background="#95A5A6" Foreground="White" BorderThickness="0"/>
+                                    <Button Content="$($res.BtnEdit)" Tag="{Binding}" x:Name="BtnEditEntry" Margin="2,2" Padding="6,2" Background="#F39C12" Foreground="White" BorderThickness="0"/>
+                                    <Button Content="$($res.BtnDelete)" Tag="{Binding}" x:Name="BtnDeleteEntry" Margin="2,2" Padding="6,2" Background="#E74C3C" Foreground="White" BorderThickness="0"/>
                                 </StackPanel>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
@@ -128,22 +347,22 @@ Write-AppLog -Level INFO -Message "SimplePASS Application Started."
             </DataGrid>
 
             <!-- Status Bar -->
-            <TextBlock x:Name="TxtStatus" Grid.Row="2" Text="Ready" Foreground="#7F8C8D" Margin="0,10,0,0" FontSize="12"/>
+            <TextBlock x:Name="TxtStatus" Grid.Row="2" Text="$($res.ReadyStatus)" Foreground="#7F8C8D" Margin="0,10,0,0" FontSize="12"/>
         </Grid>
 
         <!-- Entry Modal Window -->
         <Border x:Name="EntryModal" Background="#80000000" Visibility="Collapsed">
-            <Border Background="White" Width="450" VerticalAlignment="Center" HorizontalAlignment="Center" CornerRadius="8" Padding="25">
+            <Border Background="White" Width="460" VerticalAlignment="Center" HorizontalAlignment="Center" CornerRadius="8" Padding="25">
                 <StackPanel>
-                    <TextBlock x:Name="TxtModalTitle" Text="Password Entry" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
+                    <TextBlock x:Name="TxtModalTitle" Text="$($res.ModalTitleEdit)" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
 
-                    <TextBlock Text="Title / Service Name:" Margin="0,5,0,2"/>
+                    <TextBlock Text="$($res.LabelFormTitle)" Margin="0,5,0,2"/>
                     <TextBox x:Name="TxtFormTitle" Height="30" Padding="5"/>
 
-                    <TextBlock Text="URL:" Margin="0,8,0,2"/>
+                    <TextBlock Text="$($res.LabelFormUrl)" Margin="0,8,0,2"/>
                     <TextBox x:Name="TxtFormUrl" Height="30" Padding="5"/>
 
-                    <TextBlock Text="Username / ID:" Margin="0,8,0,2"/>
+                    <TextBlock Text="$($res.LabelFormUsername)" Margin="0,8,0,2"/>
                     <TextBox x:Name="TxtFormUsername" Height="30" Padding="5"/>
 
                     <Grid Margin="0,8,0,2">
@@ -151,8 +370,8 @@ Write-AppLog -Level INFO -Message "SimplePASS Application Started."
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Password:" Grid.Column="0"/>
-                        <Button x:Name="BtnGeneratePass" Content="Generate" Grid.Column="1" Background="#9B59B6" Foreground="White" Padding="8,2" BorderThickness="0" Cursor="Hand"/>
+                        <TextBlock Text="$($res.LabelFormPassword)" Grid.Column="0"/>
+                        <Button x:Name="BtnGeneratePass" Content="$($res.BtnGeneratePass)" Grid.Column="1" Background="#9B59B6" Foreground="White" Padding="8,2" BorderThickness="0" Cursor="Hand"/>
                     </Grid>
                     
                     <Grid>
@@ -165,12 +384,12 @@ Write-AppLog -Level INFO -Message "SimplePASS Application Started."
                         <Button x:Name="BtnTogglePassVisibility" Grid.Column="1" Content="👁" Width="30" Height="30" Margin="5,0,0,0" Background="#BDC3C7" Foreground="White" BorderThickness="0" Cursor="Hand"/>
                     </Grid>
 
-                    <TextBlock Text="Note:" Margin="0,8,0,2"/>
+                    <TextBlock Text="$($res.LabelFormNote)" Margin="0,8,0,2"/>
                     <TextBox x:Name="TxtFormNote" Height="50" Padding="5" TextWrapping="Wrap" AcceptsReturn="True"/>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
-                        <Button x:Name="BtnSaveEntry" Content="Save" Width="80" Height="32" Background="#2ECC71" Foreground="White" FontWeight="Bold" Margin="0,0,10,0" BorderThickness="0"/>
-                        <Button x:Name="BtnCancelModal" Content="Cancel" Width="80" Height="32" Background="#95A5A6" Foreground="White" BorderThickness="0"/>
+                        <Button x:Name="BtnSave" Content="$($res.BtnSave)" Width="80" Height="32" Background="#2ECC71" Foreground="White" FontWeight="Bold" Margin="0,0,10,0" BorderThickness="0"/>
+                        <Button x:Name="BtnCancelModal" Content="$($res.BtnCancel)" Width="80" Height="32" Background="#95A5A6" Foreground="White" BorderThickness="0"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -178,24 +397,24 @@ Write-AppLog -Level INFO -Message "SimplePASS Application Started."
 
         <!-- Change Master Password Modal Window -->
         <Border x:Name="ChangePassModal" Background="#80000000" Visibility="Collapsed">
-            <Border Background="White" Width="400" VerticalAlignment="Center" HorizontalAlignment="Center" CornerRadius="8" Padding="25">
+            <Border Background="White" Width="420" VerticalAlignment="Center" HorizontalAlignment="Center" CornerRadius="8" Padding="25">
                 <StackPanel>
-                    <TextBlock Text="Change Master Password" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
+                    <TextBlock Text="$($res.ModalTitleChangePass)" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
 
-                    <TextBlock Text="Current Master Password:" Margin="0,5,0,2"/>
+                    <TextBlock Text="$($res.LabelCurrentPass)" Margin="0,5,0,2"/>
                     <PasswordBox x:Name="PbCurrentPass" Height="30" Padding="5"/>
 
-                    <TextBlock Text="New Master Password:" Margin="0,8,0,2"/>
+                    <TextBlock Text="$($res.LabelNewPass)" Margin="0,8,0,2"/>
                     <PasswordBox x:Name="PbNewPass" Height="30" Padding="5"/>
 
-                    <TextBlock Text="Confirm New Master Password:" Margin="0,8,0,2"/>
+                    <TextBlock Text="$($res.LabelConfirmNewPass)" Margin="0,8,0,2"/>
                     <PasswordBox x:Name="PbConfirmNewPass" Height="30" Padding="5"/>
 
                     <TextBlock x:Name="TxtChangePassError" Foreground="#E74C3C" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap"/>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
-                        <Button x:Name="BtnSaveNewPass" Content="Change" Width="80" Height="32" Background="#F39C12" Foreground="White" FontWeight="Bold" Margin="0,0,10,0" BorderThickness="0"/>
-                        <Button x:Name="BtnCancelChangePass" Content="Cancel" Width="80" Height="32" Background="#95A5A6" Foreground="White" BorderThickness="0"/>
+                        <Button x:Name="BtnSaveNewPass" Content="$($res.BtnChangeExec)" Width="80" Height="32" Background="#F39C12" Foreground="White" FontWeight="Bold" Margin="0,0,10,0" BorderThickness="0"/>
+                        <Button x:Name="BtnCancelChangePass" Content="$($res.BtnCancel)" Width="80" Height="32" Background="#95A5A6" Foreground="White" BorderThickness="0"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -242,7 +461,7 @@ $txtFormPassword = $window.FindName("TxtFormPassword")
 $btnTogglePassVisibility = $window.FindName("BtnTogglePassVisibility")
 $txtFormNote = $window.FindName("TxtFormNote")
 $btnGeneratePass = $window.FindName("BtnGeneratePass")
-$btnSaveEntry = $window.FindName("BtnSaveEntry")
+$btnSaveEntry = $window.FindName("BtnSave")
 $btnCancelModal = $window.FindName("BtnCancelModal")
 
 $changePassModal = $window.FindName("ChangePassModal")
@@ -264,11 +483,11 @@ $script:IsPasswordVisible = $false
 # First-time setup check function
 function Update-LoginUIState {
     if (-not (Test-VaultExists)) {
-        $txtLoginSubtitle.Text = "First run detected. Create your Master Password."
-        $btnLogin.Content = "Create Vault"
+        $txtLoginSubtitle.Text = $res.FirstRunSubtitle
+        $btnLogin.Content = $res.LoginButtonCreate
     } else {
-        $txtLoginSubtitle.Text = "Enter your Master Password to unlock"
-        $btnLogin.Content = "Unlock Vault"
+        $txtLoginSubtitle.Text = $res.LoginSubtitle
+        $btnLogin.Content = $res.LoginButtonUnlock
     }
 }
 
@@ -283,7 +502,7 @@ function Start-AutoLockTimer {
             if ($mainGrid.Visibility -eq [System.Windows.Visibility]::Visible) {
                 $idleTime = [DateTime]::Now - $script:LastActivityTime
                 if ($idleTime.TotalMinutes -ge 5) {
-                    Lock-VaultApp -StatusText "Auto-locked due to 5 minutes of inactivity."
+                    Lock-VaultApp -StatusText $res.AutoLockStatus
                 }
             }
         })
@@ -302,7 +521,8 @@ $window.Add_PreviewMouseMove({ $script:LastActivityTime = [DateTime]::Now })
 $window.Add_PreviewKeyDown({ $script:LastActivityTime = [DateTime]::Now })
 
 function Lock-VaultApp {
-    param([string]$StatusText = "Vault locked.")
+    param([string]$StatusText = $null)
+    if ([string]::IsNullOrEmpty($StatusText)) { $StatusText = $res.LockStatus }
     Stop-AutoLockTimer
     $script:MasterPassword = $null
     $script:VaultEntries = @()
@@ -330,7 +550,7 @@ $pbMasterPassword.Add_KeyDown({
 $btnLogin.Add_Click({
     $inputPass = $pbMasterPassword.Password
     if ([string]::IsNullOrWhiteSpace($inputPass)) {
-        $txtLoginError.Text = "Please enter a Master Password."
+        $txtLoginError.Text = $res.EmptyPassError
         return
     }
 
@@ -351,17 +571,17 @@ $btnLogin.Add_Click({
         
         $dgEntries.ItemsSource = @($script:VaultEntries)
         if ($isFirstRun) {
-            $txtStatus.Text = "Master Password created successfully. Vault initialized."
+            $txtStatus.Text = $res.FirstRunSuccessStatus
         } else {
-            $txtStatus.Text = "Authenticated successfully. Loaded $($script:VaultEntries.Count) entries."
+            $txtStatus.Text = $res.UnlockSuccessStatus -f $script:VaultEntries.Count
         }
         Start-AutoLockTimer
     } catch {
-        Write-AppLog -Level ERROR -Message "Login / Vault creation failed" -Exception $_.Exception
+        Write-AppLog -Level ERROR -Message $res.LoginFailLog -Exception $_.Exception
         if (Test-VaultExists) {
-            $txtLoginError.Text = "Invalid Master Password, corrupt data, or legacy v1.0 vault format."
+            $txtLoginError.Text = $res.LoginFailError
         } else {
-            $txtLoginError.Text = "Failed to create Vault: $($_.Exception.Message)"
+            $txtLoginError.Text = "$($res.CreateFailError)$($_.Exception.Message)"
         }
     }
 })
@@ -376,35 +596,35 @@ $txtSearch.Add_TextChanged({
 
 # Lock Button
 $btnLock.Add_Click({
-    Lock-VaultApp -StatusText "Vault locked."
+    Lock-VaultApp -StatusText $res.LockStatus
 })
 
 # Export CSV Button
 $btnExportCsv.Add_Click({
     if (-not $script:VaultEntries -or $script:VaultEntries.Count -eq 0) {
-        [System.Windows.MessageBox]::Show("No entries available to export.", "Export CSV", "OK", "Information") | Out-Null
+        [System.Windows.MessageBox]::Show($res.CsvNoEntriesMsg, $res.CsvNoEntriesTitle, "OK", "Information") | Out-Null
         return
     }
 
-    $confirmRes = [System.Windows.MessageBox]::Show("Security Warning: Exported CSV files contain unencrypted plaintext passwords. Ensure you store or delete the file securely after use.`n`nDo you wish to proceed?", "Security Warning", "YesNo", "Warning")
+    $confirmRes = [System.Windows.MessageBox]::Show($res.CsvWarningMsg, $res.CsvWarningTitle, "YesNo", "Warning")
     if ($confirmRes -ne "Yes") {
         return
     }
 
     $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
-    $saveFileDialog.Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*"
+    $saveFileDialog.Filter = $res.CsvSaveFilter
     $saveFileDialog.FileName = "SimplePASS_Export_$((Get-Date).ToString('yyyyMMdd_HHmmss')).csv"
-    $saveFileDialog.Title = "Export Vault Entries to CSV"
+    $saveFileDialog.Title = $res.CsvSaveTitle
 
     if ($saveFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         try {
             Export-VaultToCsv -Entries $script:VaultEntries -Path $saveFileDialog.FileName
-            $txtStatus.Text = "Exported $($script:VaultEntries.Count) entries to CSV successfully."
-            Write-AppLog -Level INFO -Message "Vault entries exported to CSV: $($saveFileDialog.FileName)"
-            [System.Windows.MessageBox]::Show("CSV export completed successfully.", "Export CSV", "OK", "Information") | Out-Null
+            $txtStatus.Text = $res.StatusCsvSuccess -f $script:VaultEntries.Count
+            Write-AppLog -Level INFO -Message "$($res.LogCsvSuccess)$($saveFileDialog.FileName)"
+            [System.Windows.MessageBox]::Show($res.MsgCsvSuccess, $res.MsgCsvSuccessTitle, "OK", "Information") | Out-Null
         } catch {
-            Write-AppLog -Level ERROR -Message "CSV Export failed" -Exception $_.Exception
-            [System.Windows.MessageBox]::Show("Failed to export CSV: $($_.Exception.Message)", "Export Error", "OK", "Error") | Out-Null
+            Write-AppLog -Level ERROR -Message $res.LogCsvFailed -Exception $_.Exception
+            [System.Windows.MessageBox]::Show("$($res.MsgCsvFailed)$($_.Exception.Message)", $res.MsgCsvFailedTitle, "OK", "Error") | Out-Null
         }
     }
 })
@@ -424,15 +644,15 @@ $btnCancelChangePass.Add_Click({
 
 $btnSaveNewPass.Add_Click({
     if ($pbCurrentPass.Password -ne $script:MasterPassword) {
-        $txtChangePassError.Text = "Current Master Password is incorrect."
+        $txtChangePassError.Text = $res.ErrorCurrentPassIncorrect
         return
     }
     if ([string]::IsNullOrWhiteSpace($pbNewPass.Password)) {
-        $txtChangePassError.Text = "New Master Password cannot be empty."
+        $txtChangePassError.Text = $res.ErrorNewPassEmpty
         return
     }
     if ($pbNewPass.Password -ne $pbConfirmNewPass.Password) {
-        $txtChangePassError.Text = "New Master Password confirmation does not match."
+        $txtChangePassError.Text = $res.ErrorConfirmMismatch
         return
     }
 
@@ -440,17 +660,17 @@ $btnSaveNewPass.Add_Click({
         $script:MasterPassword = $pbNewPass.Password
         Save-Vault -Entries $script:VaultEntries -MasterPassword $script:MasterPassword
         $changePassModal.Visibility = [System.Windows.Visibility]::Collapsed
-        $txtStatus.Text = "Master Password updated successfully."
-        Write-AppLog -Level INFO -Message "Master Password changed."
+        $txtStatus.Text = $res.StatusPassChanged
+        Write-AppLog -Level INFO -Message $res.LogPassChanged
     } catch {
-        $txtChangePassError.Text = "Failed to update Master Password: $($_.Exception.Message)"
+        $txtChangePassError.Text = "$($res.ErrorPassChangeFailed)$($_.Exception.Message)"
     }
 })
 
 # Add Entry Button
 $btnAddEntry.Add_Click({
     $script:EditingEntryId = $null
-    $txtModalTitle.Text = "New Password Entry"
+    $txtModalTitle.Text = $res.ModalTitleAdd
     $txtFormTitle.Text = ""
     $txtFormUrl.Text = ""
     $txtFormUsername.Text = ""
@@ -493,7 +713,7 @@ $btnGeneratePass.Add_Click({
 # Save Entry Button
 $btnSaveEntry.Add_Click({
     if ([string]::IsNullOrWhiteSpace($txtFormTitle.Text)) {
-        [System.Windows.MessageBox]::Show("Please enter a title.", "Validation Error", "OK", "Error") | Out-Null
+        [System.Windows.MessageBox]::Show($res.ValidationErrorMsg, $res.ValidationErrorTitle, "OK", "Error") | Out-Null
         return
     }
 
@@ -517,7 +737,7 @@ $btnSaveEntry.Add_Click({
     Save-Vault -Entries $script:VaultEntries -MasterPassword $script:MasterPassword
     $dgEntries.ItemsSource = @(Search-VaultEntries -Entries $script:VaultEntries -Keyword $txtSearch.Text)
     $entryModal.Visibility = [System.Windows.Visibility]::Collapsed
-    $txtStatus.Text = "Entry saved. (Total: $($script:VaultEntries.Count))"
+    $txtStatus.Text = $res.StatusSaved -f $script:VaultEntries.Count
 })
 
 # DataGrid Row Actions via Event Routing
@@ -527,19 +747,19 @@ $window.AddHandler([System.Windows.Documents.Hyperlink]::RequestNavigateEvent, [
         $rawUrl = $e.Uri.OriginalString
         $targetUrl = Format-VaultUrl -Url $rawUrl
         if ([string]::IsNullOrWhiteSpace($targetUrl) -or $targetUrl -notmatch "^https?://" -or $targetUrl -match '[\s"''`]') {
-            [System.Windows.MessageBox]::Show("Opening this URL is blocked for security reasons. Only http:// and https:// URLs are allowed.", "Security Warning", "OK", "Warning") | Out-Null
-            Write-AppLog -Level WARN -Message "Blocked launching unsafe URL: $rawUrl"
+            [System.Windows.MessageBox]::Show($res.UrlBlockMsg, $res.UrlBlockTitle, "OK", "Warning") | Out-Null
+            Write-AppLog -Level WARN -Message "$($res.LogUrlBlocked)$rawUrl"
         } else {
             $psi = New-Object System.Diagnostics.ProcessStartInfo
             $psi.FileName = $targetUrl
             $psi.UseShellExecute = $true
             [System.Diagnostics.Process]::Start($psi) | Out-Null
-            $txtStatus.Text = "Opened URL in browser: $targetUrl"
-            Write-AppLog -Level INFO -Message "Opened URL in default browser: $targetUrl"
+            $txtStatus.Text = $res.StatusUrlOpened -f $targetUrl
+            Write-AppLog -Level INFO -Message ($res.LogUrlOpened -f $targetUrl)
         }
     } catch {
-        Write-AppLog -Level ERROR -Message "Failed to open URL in browser" -Exception $_.Exception
-        $txtStatus.Text = "Failed to open URL: $($_.Exception.Message)"
+        Write-AppLog -Level ERROR -Message $res.LogUrlOpenFailed -Exception $_.Exception
+        $txtStatus.Text = $res.StatusUrlOpenFailed -f $_.Exception.Message
     }
     $e.Handled = $true
 })
@@ -556,29 +776,29 @@ $window.AddHandler([System.Windows.Controls.Primitives.ButtonBase]::ClickEvent, 
             $script:VaultEntries = @(Move-VaultEntryToTop -Entries $script:VaultEntries -TargetId $entry.id)
             Save-Vault -Entries $script:VaultEntries -MasterPassword $script:MasterPassword
             $dgEntries.ItemsSource = @(Search-VaultEntries -Entries $script:VaultEntries -Keyword $txtSearch.Text)
-            $txtStatus.Text = "Entry moved to top."
+            $txtStatus.Text = $res.StatusMovedTop
         }
     }
-    elseif ($source.Name -eq "BtnCopyPass" -or $source.Content -eq "Copy Pass") {
+    elseif ($source.Name -eq "BtnCopyPass" -or $source.Content -eq $res.BtnCopyPass) {
         $passToCopy = if ($entry -and $entry.password) { $entry.password } else { $source.Tag }
         if ($passToCopy) {
             [void](Set-ClipboardWithAutoClear -Text $passToCopy -ClearAfterSeconds 30)
-            $txtStatus.Text = "Password copied to clipboard (Auto-clears in 30s)."
-            Write-AppLog -Level INFO -Message "Password copied to clipboard."
+            $txtStatus.Text = $res.MsgCopiedPass
+            Write-AppLog -Level INFO -Message $res.MsgCopiedPassLog
         }
     }
-    elseif ($source.Name -eq "BtnCopyUser" -or $source.Content -eq "Copy User") {
+    elseif ($source.Name -eq "BtnCopyUser" -or $source.Content -eq $res.BtnCopyUser) {
         $userToCopy = if ($entry -and $entry.username) { $entry.username } else { $source.Tag }
         if ($userToCopy) {
             [void](Set-ClipboardWithAutoClear -Text $userToCopy -ClearAfterSeconds 30)
-            $txtStatus.Text = "Username copied to clipboard."
-            Write-AppLog -Level INFO -Message "Username copied to clipboard."
+            $txtStatus.Text = $res.MsgCopiedUser
+            Write-AppLog -Level INFO -Message $res.MsgCopiedUserLog
         }
     }
-    elseif ($source.Name -eq "BtnEditEntry" -or $source.Content -eq "Edit") {
+    elseif ($source.Name -eq "BtnEditEntry" -or $source.Content -eq $res.BtnEdit) {
         if ($entry) {
             $script:EditingEntryId = $entry.id
-            $txtModalTitle.Text = "Edit Entry"
+            $txtModalTitle.Text = $res.ModalTitleEdit
             $txtFormTitle.Text = $entry.title
             $txtFormUrl.Text = $entry.url
             $txtFormUsername.Text = $entry.username
@@ -591,16 +811,17 @@ $window.AddHandler([System.Windows.Controls.Primitives.ButtonBase]::ClickEvent, 
             $entryModal.Visibility = [System.Windows.Visibility]::Visible
         }
     }
-    elseif ($source.Name -eq "BtnDeleteEntry" -or $source.Content -eq "Delete") {
+    elseif ($source.Name -eq "BtnDeleteEntry" -or $source.Content -eq $res.BtnDelete) {
         if ($entry) {
-            $res = [System.Windows.MessageBox]::Show("Are you sure you want to delete '$($entry.title)'?", "Confirm Delete", "YesNo", "Question")
-            if ($res -eq "Yes") {
+            $resMsg = $res.ConfirmDeleteMsg -f $entry.title
+            $resVal = [System.Windows.MessageBox]::Show($resMsg, $res.ConfirmDeleteTitle, "YesNo", "Question")
+            if ($resVal -eq "Yes") {
                 $targetId = $entry.id
                 $script:VaultEntries = @($script:VaultEntries | Where-Object { $_.id -ne $targetId })
 
                 Save-Vault -Entries $script:VaultEntries -MasterPassword $script:MasterPassword
                 $dgEntries.ItemsSource = @(Search-VaultEntries -Entries $script:VaultEntries -Keyword $txtSearch.Text)
-                $txtStatus.Text = "Entry deleted."
+                $txtStatus.Text = $res.StatusDeleted
             }
         }
     }
@@ -608,4 +829,3 @@ $window.AddHandler([System.Windows.Controls.Primitives.ButtonBase]::ClickEvent, 
 
 # Show Dialog
 [void]$window.ShowDialog()
-
