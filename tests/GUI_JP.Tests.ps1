@@ -171,18 +171,25 @@ function Run-GuiJpTests {
 
     # Test 3: Update-LoginUIState (Japanese Edition) - first-time setup state and existing vault state
     try {
-        $jpScript = Join-Path $srcDir "SimplePASS_JP.ps1"
-        $scriptContent = [System.IO.File]::ReadAllText($jpScript, [System.Text.Encoding]::UTF8)
+        $mainScript = Join-Path $srcDir "SimplePASS.ps1"
+        $scriptContent = [System.IO.File]::ReadAllText($mainScript, [System.Text.Encoding]::UTF8)
 
-        # Parse SimplePASS_JP.ps1 and extract Update-LoginUIState function body
+        # Parse SimplePASS.ps1 and extract Update-LoginUIState function body
         $ast = [System.Management.Automation.Language.Parser]::ParseInput($scriptContent, [ref]$null, [ref]$null)
         $funcAst = $ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Update-LoginUIState' }, $true)[0]
         Assert-True ($null -ne $funcAst) "Update-LoginUIState function AST successfully extracted"
         $sb = $funcAst.Body.GetScriptBlock()
 
-        # Mock dependent functions
+        # Mock dependent functions and Japanese resources
         $global:TestVaultExistsReturnValue = $false
         function Test-VaultExists { return $global:TestVaultExistsReturnValue }
+
+        $res = [PSCustomObject]@{
+            FirstRunSubtitle = "初回起動を検知しました。マスターパスワードを設定してください。"
+            LoginSubtitle = "マスターパスワードを入力して保管庫を解除してください。"
+            LoginButtonCreate = "保管庫の新規作成"
+            LoginButtonUnlock = "保管庫の解除"
+        }
 
         # Mock WPF GUI Controls
         $txtLoginSubtitle = [PSCustomObject]@{ Text = "Initial State" }
