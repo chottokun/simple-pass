@@ -170,6 +170,160 @@ function Run-GuiNewFeaturesTests {
         $results.Log += "[FAIL] Test 5: DataGrid Entry Custom Reordering - $_"
     }
 
+    # Test 6: Start-AutoLockTimer Initialization and Lifecycle
+    try {
+        # Ensure System.Windows.Visibility type exists (especially on Linux)
+        try {
+            $null = [System.Windows.Visibility]
+        } catch {
+            $definition = @'
+            namespace System.Windows {
+                public enum Visibility {
+                    Visible = 0,
+                    Hidden = 1,
+                    Collapsed = 2
+                }
+            }
+'@
+            Add-Type -TypeDefinition $definition -ErrorAction SilentlyContinue
+        }
+
+        # Override New-Object to mock DispatcherTimer on non-Windows/headless systems
+        function New-Object {
+            param(
+                [string]$TypeName,
+                $ArgumentList
+            )
+            if ($TypeName -eq "System.Windows.Threading.DispatcherTimer") {
+                $mockTimer = [PSCustomObject]@{
+                    Interval = $null
+                    Started = $false
+                    Ticks = @()
+                }
+                $mockTimer | Add-Member -MemberType ScriptMethod -Name "Add_Tick" -Value {
+                    param($action)
+                    $this.Ticks += $action
+                }
+                $mockTimer | Add-Member -MemberType ScriptMethod -Name "Start" -Value {
+                    $this.Started = $true
+                }
+                $mockTimer | Add-Member -MemberType ScriptMethod -Name "Stop" -Value {
+                    $this.Started = $false
+                }
+                return $mockTimer
+            } else {
+                return Microsoft.PowerShell.Utility\New-Object @PSBoundParameters
+            }
+        }
+
+        # Mock dependent elements
+        $global:LockVaultAppCalled = $false
+        $global:LockVaultAppStatusText = ""
+        function Lock-VaultApp {
+            param([string]$StatusText)
+            $global:LockVaultAppCalled = $true
+            $global:LockVaultAppStatusText = $StatusText
+        }
+
+        $appScript = Join-Path $srcDir "SimplePASS.ps1"
+        $scriptContent = [System.IO.File]::ReadAllText($appScript, [System.Text.Encoding]::UTF8)
+        $ast = [System.Management.Automation.Language.Parser]::ParseInput($scriptContent, [ref]$null, [ref]$null)
+
+        $startFuncAst = $ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Start-AutoLockTimer' }, $true)[0]
+        Assert-True ($null -ne $startFuncAst) "Start-AutoLockTimer function AST successfully extracted"
+        $startSb = $startFuncAst.Body.GetScriptBlock()
+
+        $stopFuncAst = $ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Stop-AutoLockTimer' }, $true)[0]
+        Assert-True ($null -ne $stopFuncAst) "Stop-AutoLockTimer function AST successfully extracted"
+        $stopSb = $stopFuncAst.Body.GetScriptBlock()
+
+        # Initialize script variables
+        $script:AutoLockTimer = $null
+        $script:LastActivityTime = $null
+
+        # Call Start-AutoLockTimer
+        & $startSb
+
+        Assert-True ($null -ne $script:AutoLockTimer) "AutoLockTimer was created"
+        Assert-True ($script:AutoLockTimer.Interval.TotalSeconds -eq 30) "Timer interval is 30 seconds"
+        Assert-True ($script:AutoLockTimer.Started) "Timer was started"
+        Assert-True ($null -ne $script:LastActivityTime) "LastActivityTime was set"
+        Assert-True ($script:AutoLockTimer.Ticks.Count -eq 1) "Tick event handler was added"
+
+        # Call Start-AutoLockTimer again to ensure it reuses the timer
+        $firstTimer = $script:AutoLockTimer
+        $firstTimer.Started = $false
+        $script:LastActivityTime = [DateTime]::Now.AddMinutes(-10) # Set past activity time
+
+        & $startSb
+
+        Assert-True ([object]::ReferenceEquals($firstTimer, $script:AutoLockTimer)) "Timer object was reused, not recreated"
+        Assert-True ($script:AutoLockTimer.Started) "Timer was started again"
+        $diff = [DateTime]::Now - $script:LastActivityTime
+        Assert-True ($diff.TotalSeconds -lt 5) "LastActivityTime was refreshed to current time"
+        Assert-True ($script:AutoLockTimer.Ticks.Count -eq 1) "No duplicate tick handlers added"
+
+        # Call Stop-AutoLockTimer
+        & $stopSb
+        Assert-True (-not $script:AutoLockTimer.Started) "Timer was stopped"
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 6: Start-AutoLockTimer Initialization and Lifecycle"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 6: Start-AutoLockTimer Initialization and Lifecycle - $_"
+    }
+
+    # Test 7: Auto-Lock Tick Handler Behaviour & Inactivity Conditions
+    try {
+        # Initialize script variables and mock timer
+        $script:AutoLockTimer = $null
+        $script:LastActivityTime = $null
+
+        $mainGrid = [PSCustomObject]@{ Visibility = [System.Windows.Visibility]::Visible }
+
+        # Extract/Run Start-AutoLockTimer to register Tick event
+        & $startSb
+
+        $tickHandler = $script:AutoLockTimer.Ticks[0]
+        Assert-True ($null -ne $tickHandler) "Tick handler was registered"
+
+        # Case 1: Grid is Visible, Inactivity is less than 5 minutes (e.g., 2 minutes)
+        $global:LockVaultAppCalled = $false
+        $global:LockVaultAppStatusText = ""
+        $script:LastActivityTime = [DateTime]::Now.AddMinutes(-2)
+
+        & $tickHandler
+
+        Assert-True (-not $global:LockVaultAppCalled) "Lock-VaultApp was NOT called for < 5 mins inactivity"
+
+        # Case 2: Grid is Visible, Inactivity is 5 minutes or more (e.g., 5.1 minutes)
+        $global:LockVaultAppCalled = $false
+        $global:LockVaultAppStatusText = ""
+        $script:LastActivityTime = [DateTime]::Now.AddMinutes(-5.1)
+
+        & $tickHandler
+
+        Assert-True $global:LockVaultAppCalled "Lock-VaultApp WAS called for >= 5 mins inactivity"
+        Assert-True ($global:LockVaultAppStatusText -eq "Auto-locked due to 5 minutes of inactivity.") "Correct status text used"
+
+        # Case 3: Grid is Collapsed, Inactivity is 5 minutes or more (e.g., 10 minutes)
+        $global:LockVaultAppCalled = $false
+        $global:LockVaultAppStatusText = ""
+        $mainGrid.Visibility = [System.Windows.Visibility]::Collapsed
+        $script:LastActivityTime = [DateTime]::Now.AddMinutes(-10)
+
+        & $tickHandler
+
+        Assert-True (-not $global:LockVaultAppCalled) "Lock-VaultApp was NOT called when mainGrid is collapsed"
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 7: Auto-Lock Tick Handler Behaviour & Inactivity Conditions"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 7: Auto-Lock Tick Handler Behaviour & Inactivity Conditions - $_"
+    }
+
     return $results
 }
 
