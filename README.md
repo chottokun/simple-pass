@@ -1,29 +1,31 @@
-# SimplePASS 🔐
+﻿# SimplePASS 🔐
 
 [![SimplePASS CI Workflow](https://github.com/chottokun/simple-pass/actions/workflows/ci.yml/badge.svg)](https://github.com/chottokun/simple-pass/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PowerShell 5.1+](https://img.shields.io/badge/PowerShell-5.1%2B-blue.svg)](https://microsoft.com/powershell)
 
-Windows環境で動作する、ローカル完結型かつ高セキュリティな PowerShell + WPF パスワード管理 GUI アプリケーションです。
-外部サーバー通信を一切行わず、スタンドアロンかつポータブルに安全なデータ保管が可能です。
+Windows環境で動作する、ローカル完結型の PowerShell + WPF パスワード管理 GUI アプリケーション。
+外部サーバー通信は行わず、スタンドアロンかつポータブルに動作する。
+英語・日本語の動的ローカリゼーションに対応し、単一のコードベースから両言語版を提供する。
 
 ---
 
-## 🌟 特長 (Key Features)
+## 主な機能
 
-- 🎨 **グラフィカルな操作画面**: PowerShell 5.1 / WPF (XAML) で構築された直感的でモダンな UI & ウィンドウアイコン。
-- 🛡 **ゼロトラスト暗号化 (v2.0)**: PBKDF2-SHA256 (100,000回試行) + AES-256-CBC + HMAC-SHA256 改ざん検知による二重保護。
-- 🔝 **最上部固定 (Top Pinning)**: よく使うエントリをワンクリックでリストの最上部へ固定・順序保存。
-- 🔗 **URLワンクリック起動**: 登録された Web サイトの URL を安全なプロトコルバリデーションのもとデフォルトブラウザで起動。
-- 📥 **CSV エクスポート機能**: セキュリティ確認ダイアログのもと、保管庫データを外部 CSV ファイルへ出力可能。
-- 🔑 **マスターパスワード変更機能**: アプリ内からいつでも保管庫の暗号化鍵を安全に更新・再暗号化可能。
-- 👁 **パスワード表示切替**: マスク表示 (`PasswordBox`) と平文表示 (`TextBox`) のワンクリック切替。
-- ⏱ **自動ロック機能**: 5分間の無操作（マウス・キーボード操作なし）を検知して自動的に保管庫をロック。
-- 📋 **クリップボード自動保護**: パスワード・ユーザーIDをコピー後、30秒経過でクリップボードを自動消去。
+- **WPF GUI**: PowerShell 5.1 / WPF (XAML) による GUI。ウィンドウアイコン付き。
+- **動的ローカリゼーション (i18n)**: `-Language` パラメータとリソース辞書による英語/日本語切替。`SimplePASS_JP.ps1` は `SimplePASS.ps1 -Language ja` を呼び出す薄いラッパー。
+- **暗号化 (v2.0)**: PBKDF2-SHA256 (100,000回) + AES-256-CBC + HMAC-SHA256 改ざん検知。
+- **最上部固定 (Top Pinning)**: エントリをリスト最上部へ固定・順序保存。
+- **URLワンクリック起動**: プロトコルホワイトリスト (`http://`, `https://`) バリデーション付き。
+- **CSV エクスポート**: 確認ダイアログ付きで保管庫データを CSV 出力。
+- **マスターパスワード変更**: アプリ内から保管庫の暗号化鍵を更新・再暗号化。
+- **パスワード表示切替**: `PasswordBox` / `TextBox` のトグル切替。
+- **自動ロック**: 5分間無操作検知による自動ロック（DispatcherTimer ベース）。
+- **クリップボード自動消去**: コピー後30秒でクリップボードを自動クリア。
 
 ---
 
-## 🛡 セキュリティ仕様 (Security Architecture)
+## セキュリティ仕様
 
 1. **暗号導出 & 暗号化**:
    - **PBKDF2**: SHA-256 ハッシュアルゴリズム、個別の 32 バイト CSPRNG Salt、100,000 イテレーション。
@@ -37,7 +39,7 @@ Windows環境で動作する、ローカル完結型かつ高セキュリティ�
 
 ---
 
-## 💻 動作環境 (Requirements)
+## 動作環境
 
 - **OS**: Windows 10 / Windows 11
 - **PowerShell**: PowerShell 5.1 以上 (Windows 標準 PowerShell)
@@ -45,17 +47,17 @@ Windows環境で動作する、ローカル完結型かつ高セキュリティ�
 
 ---
 
-## 🚀 起動方法 (Quick Start)
+## 起動方法
 
-リポジトリ直下のバッチファイルをダブルクリック（またはコマンドラインから実行）するだけで起動できます。
+リポジトリ直下のバッチファイルをダブルクリック、またはコマンドラインから実行する。
 
-### 🇯🇵 日本語版
+### 日本語版
 ```cmd
 start_JP.bat
 ```
 *(または `SimplePASS_JP.bat`)*
 
-### 🇺🇸 英語版 (English Edition)
+### 英語版
 ```cmd
 start.bat
 ```
@@ -63,7 +65,7 @@ start.bat
 
 ---
 
-## 📁 ディレクトリ構成 (Directory Structure)
+## ディレクトリ構成
 
 ```text
 SimplePASS/
@@ -85,38 +87,71 @@ SimplePASS/
 │   └── logs/
 │       └── app.log                       # 統合エラーログ (1MB自動ローテーション)
 ├── src/
-│   ├── SimplePASS.ps1                    # メイン GUI アプリケーション (英語版)
-│   ├── SimplePASS_JP.ps1                 # メイン GUI アプリケーション (日本語版)
+│   ├── SimplePASS.ps1                    # 統合 GUI アプリケーション (-Language en|ja で言語切替)
+│   ├── SimplePASS_JP.ps1                 # 日本語版ラッパー (SimplePASS.ps1 -Language ja を呼出)
 │   ├── CryptoModule.psm1                 # 暗号コアモジュール (PBKDF2-SHA256 + AES-256 + HMAC)
 │   ├── VaultModule.psm1                  # 保管庫データ CRUD & 永続化モジュール
 │   ├── UtilsModule.psm1                  # クリップボード自動消去 & パスワード生成器
 │   └── LoggerModule.psm1                 # エラーログ・例外追跡モジュール
 └── tests/
-    ├── RunAllTests.ps1                   # 全自動統合テストランナー (全38項目)
-    ├── Crypto.Tests.ps1                  # 暗号強度・定数時間HMAC・ネガティブテスト
-    ├── Vault.Tests.ps1                   # CRUD・CSV出力・順序操作・URLセキュリティテスト
-    ├── Utils.Tests.ps1                   # パスワード生成境界値・クリップボード動作テスト
-    ├── GUI.Tests.ps1                     # DataGrid ItemsSource バインディングテスト
-    ├── GUI_FullButtons.Tests.ps1         # フル UI ボタンインタラクションテスト
-    ├── GUI_CriticalUserOperations.Tests.ps1 # 再認証・0件検索復帰テスト
-    ├── GUI_JP.Tests.ps1                 # 日本語版 XAML 解析・コントロール結合テスト
-    ├── GUI_NewFeatures.Tests.ps1         # 新機能（Top固定・表示トグル・自動ロック）テスト
-    ├── EncodingAndSyntax.Tests.ps1       # 全ファイル UTF-8 BOM & PSScriptAnalyzer リンターテスト
-    └── Logger.Tests.ps1                  # ログ記録・例外スタックトレース出力テスト
+    ├── RunAllTests.ps1                   # 全自動統合テストランナー (全64項目)
+    ├── Crypto.Tests.ps1                  # 暗号 (AES/HMAC/PBKDF2/Salt/DPAPI) 23テスト
+    ├── Vault.Tests.ps1                   # CRUD・CSV出力・順序操作・URLセキュリティ 14テスト
+    ├── Utils.Tests.ps1                   # パスワード生成・クリップボード・境界値 5テスト
+    ├── GUI.Tests.ps1                     # DataGrid バインディング・XAML パース・LoginUIState 4テスト
+    ├── GUI_FullButtons.Tests.ps1         # フル UI ボタンインタラクション 1テスト
+    ├── GUI_CriticalUserOperations.Tests.ps1 # 再認証・0件検索復帰 2テスト
+    ├── GUI_JP.Tests.ps1                  # 日本語リソース XAML 展開・Lock-VaultApp・LoginUIState 3テスト
+    ├── GUI_NewFeatures.Tests.ps1         # パスワード変更・表示トグル・Lock-VaultApp・AutoLockTimer 7テスト
+    ├── EncodingAndSyntax.Tests.ps1       # AST構文解析・UTF-8 BOM 適合・PSScriptAnalyzer 3テスト
+    └── Logger.Tests.ps1                  # ログ記録・例外スタックトレース出力 2テスト
 ```
 
 ---
 
-## 🧪 テストの実行方法 (Testing)
+## テスト (Testing)
 
-全38項目の全自動統合テストスイート（AST構文解析・全ファイル UTF-8 BOM 適合検証・`PSScriptAnalyzer` 静的コード解析を含む）が含まれています。
+全64項目の自動テストスイートを含む。AST 構文解析・全ファイル UTF-8 BOM 適合検証・`PSScriptAnalyzer` 静的コード解析も実行される。
+GitHub Actions CI (`windows-latest`) で push / PR 時に自動実行される。
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File "tests\RunAllTests.ps1"
 ```
 
+### テスト内訳
+
+| テストファイル | 項目数 | 対象 |
+|---|---|---|
+| Crypto.Tests.ps1 | 23 | AES-256, HMAC-SHA256, PBKDF2, Salt, DPAPI |
+| Vault.Tests.ps1 | 14 | CRUD, CSV出力, 順序操作, URL セキュリティ |
+| Utils.Tests.ps1 | 5 | パスワード生成, クリップボード, 境界値 |
+| GUI.Tests.ps1 | 4 | DataGrid, XAML パース, LoginUIState |
+| GUI_FullButtons.Tests.ps1 | 1 | フル UI ボタンワークフロー |
+| GUI_CriticalUserOperations.Tests.ps1 | 2 | 再認証, 0件検索復帰 |
+| GUI_JP.Tests.ps1 | 3 | 日本語 XAML 展開, Lock-VaultApp, LoginUIState |
+| GUI_NewFeatures.Tests.ps1 | 7 | パスワード変更, 表示トグル, AutoLockTimer |
+| EncodingAndSyntax.Tests.ps1 | 3 | AST 構文, UTF-8 BOM, PSScriptAnalyzer |
+| Logger.Tests.ps1 | 2 | ログ記録, 例外スタックトレース |
+| **合計** | **64** | |
+
 ---
 
-## 📜 ライセンス (License)
+## アーキテクチャ補足
 
-本プロジェクトは [MIT License](LICENSE) のもとで公開されています。
+### 動的ローカリゼーション (i18n)
+
+`SimplePASS.ps1` は `-Language` パラメータ（デフォルト `en`）を受け取り、言語に応じたリソース辞書 `$res` を生成する。XAML テンプレート内の `$($res.PropertyName)` を `ExpandString` で展開し、WPF コントロールに動的にバインドする。
+
+```
+SimplePASS.ps1 -Language en   → 英語リソース辞書で XAML を展開
+SimplePASS.ps1 -Language ja   → 日本語リソース辞書で XAML を展開
+SimplePASS_JP.ps1             → SimplePASS.ps1 -Language ja を呼び出すラッパー
+```
+
+新しい言語を追加する場合は、`SimplePASS.ps1` 内のリソース辞書ブロックに言語分岐を追加する。
+
+---
+
+## ライセンス (License)
+
+[MIT License](LICENSE)
