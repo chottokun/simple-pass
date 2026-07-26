@@ -268,10 +268,11 @@ function Search-VaultEntries {
     $kw = $Keyword.ToLower()
     $matchedList = [System.Collections.Generic.List[Object]]::new()
     foreach ($entry in $Entries) {
-        $t  = (Get-ObjectPropertyValue -obj $entry -propName "title").ToLower()
-        $u  = (Get-ObjectPropertyValue -obj $entry -propName "url").ToLower()
-        $un = (Get-ObjectPropertyValue -obj $entry -propName "username").ToLower()
-        $n  = (Get-ObjectPropertyValue -obj $entry -propName "note").ToLower()
+        if ($null -eq $entry) { continue }
+        $t  = if ($null -ne $entry.title) { $entry.title.ToString().ToLower() } else { "" }
+        $u  = if ($null -ne $entry.url) { $entry.url.ToString().ToLower() } else { "" }
+        $un = if ($null -ne $entry.username) { $entry.username.ToString().ToLower() } else { "" }
+        $n  = if ($null -ne $entry.note) { $entry.note.ToString().ToLower() } else { "" }
 
         if ($t.Contains($kw) -or $u.Contains($kw) -or $un.Contains($kw) -or $n.Contains($kw)) {
             $matchedList.Add($entry)
@@ -299,11 +300,12 @@ function Export-VaultToCsv {
 
     $exportObjects = [System.Collections.Generic.List[Object]]::new()
     foreach ($entry in $Entries) {
-        $t  = Get-ObjectPropertyValue -obj $entry -propName "title"
-        $u  = Get-ObjectPropertyValue -obj $entry -propName "url"
-        $un = Get-ObjectPropertyValue -obj $entry -propName "username"
-        $p  = Get-ObjectPropertyValue -obj $entry -propName "password"
-        $n  = Get-ObjectPropertyValue -obj $entry -propName "note"
+        if ($null -eq $entry) { continue }
+        $t  = if ($null -ne $entry.title) { $entry.title.ToString() } else { "" }
+        $u  = if ($null -ne $entry.url) { $entry.url.ToString() } else { "" }
+        $un = if ($null -ne $entry.username) { $entry.username.ToString() } else { "" }
+        $p  = if ($null -ne $entry.password) { $entry.password.ToString() } else { "" }
+        $n  = if ($null -ne $entry.note) { $entry.note.ToString() } else { "" }
 
         $exportObjects.Add([PSCustomObject]@{
             Title    = $t
