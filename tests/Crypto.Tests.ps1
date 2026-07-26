@@ -438,7 +438,7 @@ function Run-CryptoTests {
     # Test 19: Protect-DataWithAes Handling of Special Characters and Empty/Blank Inputs
     try {
         $specialTexts = @(
-            "譌･譛ｬ隱槭・譁・ｭ励→Emoji 柏泊笨ｨ",
+            "隴鯉ｽ･隴幢ｽｬ髫ｱ讒ｭ繝ｻ隴√・・ｭ蜉ｱ竊脱moji 﨟樊沛﨟樊ｳ顔ｬｨ・ｨ",
             "   "
         )
         $aesKey = New-Object byte[] 32
@@ -548,7 +548,7 @@ function Run-CryptoTests {
         $results.Log += "[FAIL] Test 21: AES Encryption Cryptographic Parameter Validations - $_"
     }
 
-    # Test 7: DPAPI Protection and Unprotection (Platform-conditional Behavior)
+    # Test 22: DPAPI Protection and Unprotection (Platform-conditional Behavior)
     try {
         $isWindowsPlatform = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
         if ($isWindowsPlatform) {
@@ -600,13 +600,13 @@ function Run-CryptoTests {
         }
 
         $results.Passed++
-        $results.Log += "[PASS] Test 7: DPAPI Protection and Unprotection (Platform-conditional Behavior)"
+        $results.Log += "[PASS] Test 22: DPAPI Protection and Unprotection (Platform-conditional Behavior)"
     } catch {
         $results.Failed++
-        $results.Log += "[FAIL] Test 7: DPAPI Protection and Unprotection - $_"
+        $results.Log += "[FAIL] Test 22: DPAPI Protection and Unprotection - $_"
     }
 
-    # Test 8: DPAPI Edge Cases (Platform-conditional Behavior)
+    # Test 23: DPAPI Edge Cases (Platform-conditional Behavior)
     try {
         $isWindowsPlatform = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
         if ($isWindowsPlatform) {
@@ -659,10 +659,10 @@ function Run-CryptoTests {
         }
 
         $results.Passed++
-        $results.Log += "[PASS] Test 8: DPAPI Edge Cases (Platform-conditional Behavior)"
+        $results.Log += "[PASS] Test 23: DPAPI Edge Cases (Platform-conditional Behavior)"
     } catch {
         $results.Failed++
-        $results.Log += "[FAIL] Test 8: DPAPI Edge Cases - $_"
+        $results.Log += "[FAIL] Test 23: DPAPI Edge Cases - $_"
     }
 
     return $results
