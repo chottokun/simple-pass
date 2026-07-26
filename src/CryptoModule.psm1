@@ -5,7 +5,7 @@ Add-Type -AssemblyName System.Security
 function New-CryptoSalt {
     [CmdletBinding()]
     param([int]$Length = 32)
-    $bytes = New-Object byte[] $Length
+    $bytes = [byte[]]::new($Length)
     $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
     try {
         $rng.GetBytes($bytes)
@@ -25,7 +25,7 @@ function Derive-KeyIVAndHmac {
         [int]$Iterations = 100000
     )
     # Generate 80 bytes: 32 (AES-256 Key) + 16 (AES IV) + 32 (HMAC Key) using SHA-256
-    $pbkdf2 = New-Object System.Security.Cryptography.Rfc2898DeriveBytes(
+    $pbkdf2 = [System.Security.Cryptography.Rfc2898DeriveBytes]::new(
         $Password, $Salt, $Iterations,
         [System.Security.Cryptography.HashAlgorithmName]::SHA256
     )
@@ -118,7 +118,7 @@ function Unprotect-DataWithDpapi {
 
 function Get-HmacSignature {
     param([byte[]]$Data, [byte[]]$HmacKey)
-    $hmac = New-Object System.Security.Cryptography.HMACSHA256(@(,$HmacKey))
+    $hmac = [System.Security.Cryptography.HMACSHA256]::new($HmacKey)
     try {
         $sig = $hmac.ComputeHash($Data)
         return $sig

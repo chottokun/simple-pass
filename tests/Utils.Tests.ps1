@@ -107,6 +107,23 @@ function Run-UtilsTests {
         $results.Log += "[FAIL] Test 5: New-RandomPassword validation - $_"
     }
 
+    # Test 6: Asynchronous STA Runspace Clipboard Auto-Clear execution & safety
+    try {
+        $testText = "AutoClearRunspaceTest_" + [guid]::NewGuid().ToString()
+        $sw = [System.Diagnostics.Stopwatch]::StartNew()
+        $success = Set-ClipboardWithAutoClear -Text $testText -ClearAfterSeconds 1
+        $sw.Stop()
+
+        Assert-True ($success -is [bool]) "Set-ClipboardWithAutoClear returns boolean result"
+        Assert-True ($sw.ElapsedMilliseconds -lt 1000) "Set-ClipboardWithAutoClear execution is asynchronous and non-blocking (< 1000ms)"
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 6: Asynchronous STA Runspace Clipboard Auto-Clear non-blocking execution"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 6: Asynchronous STA Runspace Clipboard Auto-Clear test - $_"
+    }
+
     return $results
 }
 
