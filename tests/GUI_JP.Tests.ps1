@@ -117,6 +117,42 @@ function Run-GuiJpTests {
         $results.Log += "[FAIL] Test 2: Lock-VaultApp State Reset and UI Collapsing - $_"
     }
 
+    # Test 3: Update-LoginUIState functionality (TDD / Mock verification)
+    try {
+        $jpScript = Join-Path $srcDir "SimplePASS_JP.ps1"
+        $scriptContent = [System.IO.File]::ReadAllText($jpScript, [System.Text.Encoding]::UTF8)
+
+        # Parse SimplePASS_JP.ps1 and extract Update-LoginUIState function body
+        $ast = [System.Management.Automation.Language.Parser]::ParseInput($scriptContent, [ref]$null, [ref]$null)
+        $funcAst = $ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Update-LoginUIState' }, $true)[0]
+        Assert-True ($null -ne $funcAst) "Update-LoginUIState function AST successfully extracted"
+        $sb = $funcAst.Body.GetScriptBlock()
+
+        # Mock WPF GUI Controls referenced inside Update-LoginUIState
+        $txtLoginSubtitle = [PSCustomObject]@{ Text = "" }
+        $btnLogin = [PSCustomObject]@{ Content = "" }
+
+        # Scenario A: Vault does not exist (Test-VaultExists returns $false)
+        function Test-VaultExists { return $false }
+        & $sb
+
+        Assert-True ($txtLoginSubtitle.Text -eq "初回起動を検知しました。マスターパスワードを設定してください。") "Subtitle correctly set for first-time startup"
+        Assert-True ($btnLogin.Content -eq "保管庫の新規作成") "Button content correctly set for first-time startup"
+
+        # Scenario B: Vault exists (Test-VaultExists returns $true)
+        function Test-VaultExists { return $true }
+        & $sb
+
+        Assert-True ($txtLoginSubtitle.Text -eq "マスターパスワードを入力して保管庫を解除してください。") "Subtitle correctly set for unlocking vault"
+        Assert-True ($btnLogin.Content -eq "保管庫の解除") "Button content correctly set for unlocking vault"
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 3: Update-LoginUIState functionality (TDD / Mock verification)"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 3: Update-LoginUIState functionality - $_"
+    }
+
     return $results
 }
 
