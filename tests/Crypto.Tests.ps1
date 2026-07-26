@@ -410,6 +410,144 @@ function Run-CryptoTests {
         $results.Log += "[FAIL] Test 17: Derive-KeyIVAndHmac Iterations Sensitivity - $_"
     }
 
+    # Test 7: Direct AES Round-trip Encryption & Decryption (Protect-DataWithAes & Unprotect-DataWithAes)
+    try {
+        $plainText = "This is a highly secret credential string to protect 12345!"
+        $aesKey = New-Object byte[] 32
+        $aesIV = New-Object byte[] 16
+
+        $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+        $rng.GetBytes($aesKey)
+        $rng.GetBytes($aesIV)
+        $rng.Dispose()
+
+        $cipherBytes = Protect-DataWithAes -PlainText $plainText -AesKey $aesKey -AesIV $aesIV
+        Assert-True ($null -ne $cipherBytes) "Cipher bytes generated"
+        Assert-True ($cipherBytes.Length -gt 0) "Cipher bytes are not empty"
+
+        $decrypted = Unprotect-DataWithAes -CipherBytes $cipherBytes -AesKey $aesKey -AesIV $aesIV
+        Assert-True ($decrypted -eq $plainText) "Decrypted text matches the original plaintext"
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 7: Direct AES Round-trip Encryption & Decryption"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 7: Direct AES Round-trip Encryption & Decryption - $_"
+    }
+
+    # Test 8: Protect-DataWithAes Handling of Special Characters and Empty/Blank Inputs
+    try {
+        $specialTexts = @(
+            "日本語の文字とEmoji 🔐🔑✨",
+            "   "
+        )
+        $aesKey = New-Object byte[] 32
+        $aesIV = New-Object byte[] 16
+
+        $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+        $rng.GetBytes($aesKey)
+        $rng.GetBytes($aesIV)
+        $rng.Dispose()
+
+        foreach ($text in $specialTexts) {
+            $cipherBytes = Protect-DataWithAes -PlainText $text -AesKey $aesKey -AesIV $aesIV
+            $decrypted = Unprotect-DataWithAes -CipherBytes $cipherBytes -AesKey $aesKey -AesIV $aesIV
+            Assert-True ($decrypted -eq $text) "Round-trip matches for special / blank text: '$text'"
+        }
+
+        # Validate that empty string (which is mandatory) fails parameter binding / validation
+        $emptyStringThrew = $false
+        try {
+            $dummy = Protect-DataWithAes -PlainText "" -AesKey $aesKey -AesIV $aesIV
+        } catch {
+            $emptyStringThrew = $true
+        }
+        Assert-True $emptyStringThrew "Protect-DataWithAes correctly throws when PlainText is an empty string"
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 8: Protect-DataWithAes Special Characters & Empty Inputs"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 8: Protect-DataWithAes Special Characters & Empty Inputs - $_"
+    }
+
+    # Test 9: AES Encryption Uniqueness (Different IVs produce different ciphertexts)
+    try {
+        $plainText = "Consistent plaintext that will be encrypted twice"
+        $aesKey = New-Object byte[] 32
+        $aesIV1 = New-Object byte[] 16
+        $aesIV2 = New-Object byte[] 16
+
+        $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+        $rng.GetBytes($aesKey)
+        $rng.GetBytes($aesIV1)
+        # Ensure IV2 is different from IV1
+        do {
+            $rng.GetBytes($aesIV2)
+        } while ([System.BitConverter]::ToString($aesIV1) -eq [System.BitConverter]::ToString($aesIV2))
+        $rng.Dispose()
+
+        $cipherBytes1 = Protect-DataWithAes -PlainText $plainText -AesKey $aesKey -AesIV $aesIV1
+        $cipherBytes2 = Protect-DataWithAes -PlainText $plainText -AesKey $aesKey -AesIV $aesIV2
+
+        $hex1 = [System.BitConverter]::ToString($cipherBytes1)
+        $hex2 = [System.BitConverter]::ToString($cipherBytes2)
+
+        Assert-True ($hex1 -ne $hex2) "Ciphertexts encrypted with different IVs must be different"
+        $results.Passed++
+        $results.Log += "[PASS] Test 9: AES Encryption Uniqueness with different IVs"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 9: AES Encryption Uniqueness - $_"
+    }
+
+    # Test 10: AES Error Handling (Incorrect Key/IV Sizes)
+    try {
+        $plainText = "Some plaintext"
+        $correctKey = New-Object byte[] 32
+        $correctIV = New-Object byte[] 16
+        $invalidKey = New-Object byte[] 31 # Invalid size (not 16, 24, or 32)
+        $invalidIV = New-Object byte[] 15  # Invalid size (not 16)
+
+        $protectKeyError = $false
+        try {
+            $dummy = Protect-DataWithAes -PlainText $plainText -AesKey $invalidKey -AesIV $correctIV
+        } catch {
+            $protectKeyError = $true
+        }
+        Assert-True $protectKeyError "Protect-DataWithAes throws exception when key size is invalid"
+
+        $protectIVError = $false
+        try {
+            $dummy = Protect-DataWithAes -PlainText $plainText -AesKey $correctKey -AesIV $invalidIV
+        } catch {
+            $protectIVError = $true
+        }
+        Assert-True $protectIVError "Protect-DataWithAes throws exception when IV size is invalid"
+
+        $unprotectKeyError = $false
+        try {
+            $dummy = Unprotect-DataWithAes -CipherBytes (New-Object byte[] 16) -AesKey $invalidKey -AesIV $correctIV
+        } catch {
+            $unprotectKeyError = $true
+        }
+        Assert-True $unprotectKeyError "Unprotect-DataWithAes throws exception when key size is invalid"
+
+        $unprotectIVError = $false
+        try {
+            $dummy = Unprotect-DataWithAes -CipherBytes (New-Object byte[] 16) -AesKey $correctKey -AesIV $invalidIV
+        } catch {
+            $unprotectIVError = $true
+        }
+        Assert-True $unprotectIVError "Unprotect-DataWithAes throws exception when IV size is invalid"
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 10: AES Encryption Cryptographic Parameter Validations"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 10: AES Encryption Cryptographic Parameter Validations - $_"
+    }
+
     return $results
 }
 
