@@ -170,6 +170,40 @@ function Run-GuiNewFeaturesTests {
         $results.Log += "[FAIL] Test 5: DataGrid Entry Custom Reordering - $_"
     }
 
+    # Test 6: Stop-AutoLockTimer Functionality Verification
+    try {
+        $appScript = Join-Path $srcDir "SimplePASS.ps1"
+        $scriptContent = [System.IO.File]::ReadAllText($appScript, [System.Text.Encoding]::UTF8)
+
+        # Parse SimplePASS.ps1 and extract Stop-AutoLockTimer function body
+        $ast = [System.Management.Automation.Language.Parser]::ParseInput($scriptContent, [ref]$null, [ref]$null)
+        $funcAst = $ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Stop-AutoLockTimer' }, $true)[0]
+        Assert-True ($null -ne $funcAst) "Stop-AutoLockTimer function AST successfully extracted"
+        $sb = $funcAst.Body.GetScriptBlock()
+
+        # Scenario A: When $script:AutoLockTimer is null, calling the function should not throw or fail
+        $script:AutoLockTimer = $null
+        & $sb
+
+        # Scenario B: When $script:AutoLockTimer is set, calling the function should trigger the Stop method
+        $global:AutoLockTimerStopped = $false
+        $script:AutoLockTimer = New-Object PSObject
+        $script:AutoLockTimer | Add-Member -MemberType ScriptMethod -Name Stop -Value {
+            $global:AutoLockTimerStopped = $true
+        }
+        & $sb
+        Assert-True $global:AutoLockTimerStopped "Stop-AutoLockTimer successfully invoked Stop() on the timer object"
+
+        # Cleanup
+        $script:AutoLockTimer = $null
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 6: Stop-AutoLockTimer Functionality Verification"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 6: Stop-AutoLockTimer Functionality - $_"
+    }
+
     return $results
 }
 
