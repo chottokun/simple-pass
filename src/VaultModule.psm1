@@ -268,10 +268,10 @@ function Search-VaultEntries {
     $kw = $Keyword.ToLower()
     $matchedList = [System.Collections.Generic.List[Object]]::new()
     foreach ($entry in $Entries) {
-        $t  = (Get-ObjectPropertyValue -obj $entry -propName "title").ToLower()
-        $u  = (Get-ObjectPropertyValue -obj $entry -propName "url").ToLower()
-        $un = (Get-ObjectPropertyValue -obj $entry -propName "username").ToLower()
-        $n  = (Get-ObjectPropertyValue -obj $entry -propName "note").ToLower()
+        $t  = ([string]$entry.title).ToLower()
+        $u  = ([string]$entry.url).ToLower()
+        $un = ([string]$entry.username).ToLower()
+        $n  = ([string]$entry.note).ToLower()
 
         if ($t.Contains($kw) -or $u.Contains($kw) -or $un.Contains($kw) -or $n.Contains($kw)) {
             $matchedList.Add($entry)
@@ -299,11 +299,11 @@ function Export-VaultToCsv {
 
     $exportObjects = [System.Collections.Generic.List[Object]]::new()
     foreach ($entry in $Entries) {
-        $t  = Get-ObjectPropertyValue -obj $entry -propName "title"
-        $u  = Get-ObjectPropertyValue -obj $entry -propName "url"
-        $un = Get-ObjectPropertyValue -obj $entry -propName "username"
-        $p  = Get-ObjectPropertyValue -obj $entry -propName "password"
-        $n  = Get-ObjectPropertyValue -obj $entry -propName "note"
+        $t  = [string]$entry.title
+        $u  = [string]$entry.url
+        $un = [string]$entry.username
+        $p  = [string]$entry.password
+        $n  = [string]$entry.note
 
         $exportObjects.Add([PSCustomObject]@{
             Title    = $t
