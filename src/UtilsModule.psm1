@@ -1,6 +1,34 @@
 ﻿Add-Type -AssemblyName PresentationCore
 Add-Type -AssemblyName System.Windows.Forms
 
+function Get-SecureRandomInt {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [int]$Max
+    )
+
+    if ($Max -le 0) {
+        throw "Max must be greater than 0."
+    }
+
+    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try {
+        $bytes = New-Object byte[] 4
+        $limit = [uint32]::MaxValue - ([uint32]::MaxValue % [uint32]$Max)
+
+        while ($true) {
+            $rng.GetBytes($bytes)
+            $val = [BitConverter]::ToUInt32($bytes, 0)
+            if ($val -lt $limit) {
+                return [int]($val % [uint32]$Max)
+            }
+        }
+    } finally {
+        $rng.Dispose()
+    }
+}
+
 function New-RandomPassword {
     [CmdletBinding()]
     param(
@@ -19,12 +47,8 @@ function New-RandomPassword {
     $charPool = ""
     $mandatoryChars = [System.Collections.Generic.List[char]]::new()
 
-    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
-
     function Get-RandomCharFrom([string]$source) {
-        $byte = New-Object byte[] 1
-        $rng.GetBytes($byte)
-        $index = $byte[0] % $source.Length
+        $index = Get-SecureRandomInt -Max $source.Length
         return $source[$index]
     }
 
@@ -60,9 +84,7 @@ function New-RandomPassword {
 
     # Fisher-Yates shuffle
     for ($i = $passChars.Count - 1; $i -gt 0; $i--) {
-        $byte = New-Object byte[] 1
-        $rng.GetBytes($byte)
-        $j = $byte[0] % ($i + 1)
+        $j = Get-SecureRandomInt -Max ($i + 1)
         $temp = $passChars[$i]
         $passChars[$i] = $passChars[$j]
         $passChars[$j] = $temp
@@ -115,4 +137,4 @@ function Set-ClipboardWithAutoClear {
     return $setSuccess
 }
 
-Export-ModuleMember -Function New-RandomPassword, Set-ClipboardWithAutoClear
+Export-ModuleMember -Function New-RandomPassword, Set-ClipboardWithAutoClear, Get-SecureRandomInt
