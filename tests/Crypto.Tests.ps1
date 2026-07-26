@@ -148,6 +148,95 @@ function Run-CryptoTests {
         $results.Log += "[FAIL] Test 6: Corrupt vault rejection test - $_"
     }
 
+    # Test 7: Unprotect-DataWithAes - Happy Path decryption
+    try {
+        $plainText = "Hello AES-256 Decryption World 2026!"
+        $key = [byte[]](1..32)
+        $iv = [byte[]](1..16)
+
+        $cipherBytes = Protect-DataWithAes -PlainText $plainText -AesKey $key -AesIV $iv
+        $decryptedText = Unprotect-DataWithAes -CipherBytes $cipherBytes -AesKey $key -AesIV $iv
+
+        Assert-True ($decryptedText -eq $plainText) "Decrypted text matches the original plaintext"
+        $results.Passed++
+        $results.Log += "[PASS] Test 7: Unprotect-DataWithAes - Happy Path decryption"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 7: Unprotect-DataWithAes - Happy Path decryption - $_"
+    }
+
+    # Test 8: Unprotect-DataWithAes - Error handling on wrong Key
+    try {
+        $plainText = "Secret message with key verification"
+        $correctKey = [byte[]](1..32)
+        $wrongKey = [byte[]](2..33)
+        $iv = [byte[]](1..16)
+
+        $cipherBytes = Protect-DataWithAes -PlainText $plainText -AesKey $correctKey -AesIV $iv
+
+        $decryptionFailed = $false
+        try {
+            $dummy = Unprotect-DataWithAes -CipherBytes $cipherBytes -AesKey $wrongKey -AesIV $iv
+        } catch {
+            $decryptionFailed = $true
+        }
+
+        Assert-True $decryptionFailed "Decryption with wrong AES Key should fail and throw an exception"
+        $results.Passed++
+        $results.Log += "[PASS] Test 8: Unprotect-DataWithAes - Error handling on wrong Key"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 8: Unprotect-DataWithAes - Error handling on wrong Key - $_"
+    }
+
+    # Test 9: Unprotect-DataWithAes - Error handling on wrong IV
+    try {
+        $plainText = "Secret message with IV verification"
+        $key = [byte[]](1..32)
+        $correctIv = [byte[]](1..16)
+        $wrongIv = [byte[]](2..17)
+
+        $cipherBytes = Protect-DataWithAes -PlainText $plainText -AesKey $key -AesIV $correctIv
+
+        $decryptionFailedOrMismatched = $false
+        try {
+            $decryptedText = Unprotect-DataWithAes -CipherBytes $cipherBytes -AesKey $key -AesIV $wrongIv
+            if ($decryptedText -ne $plainText) {
+                $decryptionFailedOrMismatched = $true
+            }
+        } catch {
+            $decryptionFailedOrMismatched = $true
+        }
+
+        Assert-True $decryptionFailedOrMismatched "Decryption with wrong IV should either fail or result in incorrect plaintext"
+        $results.Passed++
+        $results.Log += "[PASS] Test 9: Unprotect-DataWithAes - Error handling on wrong IV"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 9: Unprotect-DataWithAes - Error handling on wrong IV - $_"
+    }
+
+    # Test 10: Unprotect-DataWithAes - Error handling on empty or corrupted CipherBytes
+    try {
+        $key = [byte[]](1..32)
+        $iv = [byte[]](1..16)
+        $corruptCipherBytes = [byte[]](1, 2, 3) # Too short / bad padding block size
+
+        $decryptionFailed = $false
+        try {
+            $dummy = Unprotect-DataWithAes -CipherBytes $corruptCipherBytes -AesKey $key -AesIV $iv
+        } catch {
+            $decryptionFailed = $true
+        }
+
+        Assert-True $decryptionFailed "Decryption of corrupted cipher bytes should fail and throw an exception"
+        $results.Passed++
+        $results.Log += "[PASS] Test 10: Unprotect-DataWithAes - Error handling on corrupted CipherBytes"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 10: Unprotect-DataWithAes - Error handling on corrupted CipherBytes - $_"
+    }
+
     return $results
 }
 
