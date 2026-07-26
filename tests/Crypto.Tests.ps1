@@ -148,6 +148,73 @@ function Run-CryptoTests {
         $results.Log += "[FAIL] Test 6: Corrupt vault rejection test - $_"
     }
 
+    # Test 7: Protect-DataWithDpapi and Unprotect-DataWithDpapi cross-platform validation
+    try {
+        $testBytes = [System.Text.Encoding]::UTF8.GetBytes("DpapiTestDataSecretString123!")
+
+        if ($IsWindows) {
+            # On Windows, DPAPI should work successfully for a round-trip
+            $protected = Protect-DataWithDpapi -Data $testBytes
+            Assert-True ($null -ne $protected) "DPAPI protect output is not null"
+            Assert-True ($protected.Length -gt 0) "DPAPI protect output has elements"
+
+            # Ensure it actually encrypted/changed the data
+            $isSame = $true
+            if ($protected.Length -eq $testBytes.Length) {
+                $isSame = $true
+                for ($i = 0; $i -lt $testBytes.Length; $i++) {
+                    if ($protected[$i] -ne $testBytes[$i]) {
+                        $isSame = $false
+                        break
+                    }
+                }
+            } else {
+                $isSame = $false
+            }
+            Assert-True (-not $isSame) "DPAPI protect output differs from original plaintext bytes"
+
+            $unprotected = Unprotect-DataWithDpapi -EncryptedData $protected
+            Assert-True ($null -ne $unprotected) "DPAPI unprotect output is not null"
+
+            $decryptedString = [System.Text.Encoding]::UTF8.GetString($unprotected)
+            Assert-True ($decryptedString -eq "DpapiTestDataSecretString123!") "DPAPI round-trip decrypted string matches original input"
+
+            $results.Passed++
+            $results.Log += "[PASS] Test 7: DPAPI Protect/Unprotect Round-trip successful on Windows"
+        } else {
+            # On non-Windows platforms, DPAPI Protect and Unprotect should throw PlatformNotSupportedException
+            $protectFailedWithPlatformNotSupported = $false
+            try {
+                $dummy = Protect-DataWithDpapi -Data $testBytes
+            } catch {
+                if ($_.Exception.GetBaseException() -is [System.PlatformNotSupportedException]) {
+                    $protectFailedWithPlatformNotSupported = $true
+                } else {
+                    throw "Expected PlatformNotSupportedException on non-Windows but got: $_"
+                }
+            }
+            Assert-True $protectFailedWithPlatformNotSupported "DPAPI Protect threw PlatformNotSupportedException on non-Windows platform"
+
+            $unprotectFailedWithPlatformNotSupported = $false
+            try {
+                $dummy = Unprotect-DataWithDpapi -EncryptedData $testBytes
+            } catch {
+                if ($_.Exception.GetBaseException() -is [System.PlatformNotSupportedException]) {
+                    $unprotectFailedWithPlatformNotSupported = $true
+                } else {
+                    throw "Expected PlatformNotSupportedException on non-Windows but got: $_"
+                }
+            }
+            Assert-True $unprotectFailedWithPlatformNotSupported "DPAPI Unprotect threw PlatformNotSupportedException on non-Windows platform"
+
+            $results.Passed++
+            $results.Log += "[PASS] Test 7: DPAPI correctly throws PlatformNotSupportedException on non-Windows platform"
+        }
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 7: DPAPI cross-platform test - $_"
+    }
+
     return $results
 }
 
