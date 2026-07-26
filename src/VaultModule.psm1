@@ -132,8 +132,7 @@ function Move-VaultEntryUp {
         [Parameter(Mandatory=$true)]
         [string]$TargetId
     )
-    $list = [System.Collections.Generic.List[Object]]::new()
-    foreach ($e in $Entries) { $list.Add($e) }
+    $list = [System.Collections.Generic.List[Object]]::new([object[]]$Entries)
 
     $index = -1
     for ($i = 0; $i -lt $list.Count; $i++) {
@@ -192,8 +191,7 @@ function Move-VaultEntryDown {
         [Parameter(Mandatory=$true)]
         [string]$TargetId
     )
-    $list = [System.Collections.Generic.List[Object]]::new()
-    foreach ($e in $Entries) { $list.Add($e) }
+    $list = [System.Collections.Generic.List[Object]]::new([object[]]$Entries)
 
     $index = -1
     for ($i = 0; $i -lt $list.Count; $i++) {
