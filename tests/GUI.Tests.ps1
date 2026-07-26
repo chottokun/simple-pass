@@ -93,6 +93,46 @@ function Run-GuiTests {
         $results.Log += "[FAIL] Test 3: SimplePASS.ps1 XAML Parsing - $_"
     }
 
+    # Test 4: Update-LoginUIState - first-time setup state and existing vault state
+    try {
+        $appScript = Join-Path $srcDir "SimplePASS.ps1"
+        $scriptContent = [System.IO.File]::ReadAllText($appScript, [System.Text.Encoding]::UTF8)
+
+        # Parse SimplePASS.ps1 and extract Update-LoginUIState function body
+        $ast = [System.Management.Automation.Language.Parser]::ParseInput($scriptContent, [ref]$null, [ref]$null)
+        $funcAst = $ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Update-LoginUIState' }, $true)[0]
+        Assert-True ($null -ne $funcAst) "Update-LoginUIState function AST successfully extracted"
+        $sb = $funcAst.Body.GetScriptBlock()
+
+        # Mock dependent functions
+        $global:TestVaultExistsReturnValue = $false
+        function Test-VaultExists { return $global:TestVaultExistsReturnValue }
+
+        # Mock WPF GUI Controls
+        $txtLoginSubtitle = [PSCustomObject]@{ Text = "Initial State" }
+        $btnLogin = [PSCustomObject]@{ Content = "Initial Content" }
+
+        # Case 1: First-time setup (Vault does not exist)
+        $global:TestVaultExistsReturnValue = $false
+        & $sb
+
+        Assert-True ($txtLoginSubtitle.Text -eq "First run detected. Create your Master Password.") "Subtitle text is set for first run"
+        Assert-True ($btnLogin.Content -eq "Create Vault") "Button content is set for first run"
+
+        # Case 2: Existing vault (Vault exists)
+        $global:TestVaultExistsReturnValue = $true
+        & $sb
+
+        Assert-True ($txtLoginSubtitle.Text -eq "Enter your Master Password to unlock") "Subtitle text is set for unlock"
+        Assert-True ($btnLogin.Content -eq "Unlock Vault") "Button content is set for unlock"
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 4: Update-LoginUIState state rendering (First run vs Unlock)"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 4: Update-LoginUIState - $_"
+    }
+
     return $results
 }
 
