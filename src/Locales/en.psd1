@@ -1,0 +1,106 @@
+﻿@{
+    # Window & General
+    Title = "SimplePASS - Password Manager"
+    Width = 880
+    FontFamily = "Segoe UI"
+    AppStartLog = "SimplePASS Application Started."
+    FatalLogMsg = "Unhandled AppDomain Exception"
+
+    # Login Panel
+    LoginSubtitle = "Enter your Master Password to unlock"
+    FirstRunSubtitle = "First run detected. Create your Master Password."
+    LoginButtonUnlock = "Unlock Vault"
+    LoginButtonCreate = "Create Vault"
+    LoginPasswordLabel = "Master Password:"
+    EmptyPassError = "Please enter a Master Password."
+    LoginFailError = "Invalid Master Password, corrupt data, or legacy v1.0 vault format."
+    CreateFailError = "Failed to create Vault: "
+    FirstRunSuccessStatus = "Master Password created successfully. Vault initialized."
+    UnlockSuccessStatus = "Authenticated successfully. Loaded {0} entries."
+    LoginFailLog = "Login / Vault creation failed"
+
+    # Main Grid Actions / Search
+    SearchTooltip = "Search title, URL, username..."
+    BtnAddEntry = "+ Add Entry"
+    BtnExportCsv = "📥 Export CSV"
+    BtnChangePass = "🔑 Change Master Pass"
+    BtnLock = "Lock Vault"
+    ReadyStatus = "Ready"
+    LockStatus = "Vault locked."
+    AutoLockStatus = "Auto-locked due to 5 minutes of inactivity."
+
+    # DataGrid Columns
+    ColTop = "Top"
+    ColTitle = "Title"
+    ColUser = "Username"
+    ColUrl = "URL"
+    ColNote = "Note"
+    ColActions = "Actions"
+
+    # Actions inside DataGrid
+    ToolTipMoveTop = "Move to Top"
+    BtnCopyPass = "Copy Pass"
+    BtnCopyUser = "Copy User"
+    BtnEdit = "Edit"
+    BtnDelete = "Delete"
+    MsgCopiedPass = "Password copied to clipboard (Auto-clears in 30s)."
+    MsgCopiedPassLog = "Password copied to clipboard."
+    MsgCopiedUser = "Username copied to clipboard."
+    MsgCopiedUserLog = "Username copied to clipboard."
+    ConfirmDeleteTitle = "Confirm Delete"
+    ConfirmDeleteMsg = "Are you sure you want to delete '{0}'?"
+    StatusDeleted = "Entry deleted."
+    StatusMovedTop = "Entry moved to top."
+
+    # Add / Edit Modal
+    ModalTitleAdd = "New Password Entry"
+    ModalTitleEdit = "Edit Entry"
+    LabelFormTitle = "Title / Service Name:"
+    LabelFormUrl = "URL:"
+    LabelFormUsername = "Username / ID:"
+    LabelFormPassword = "Password:"
+    BtnGeneratePass = "Generate"
+    LabelFormNote = "Note:"
+    BtnSave = "Save"
+    BtnCancel = "Cancel"
+    ValidationErrorTitle = "Validation Error"
+    ValidationErrorMsg = "Please enter a title."
+    StatusSaved = "Entry saved. (Total: {0})"
+
+    # Change Master Password Modal
+    ModalTitleChangePass = "Change Master Password"
+    LabelCurrentPass = "Current Master Password:"
+    LabelNewPass = "New Master Password:"
+    LabelConfirmNewPass = "Confirm New Master Password:"
+    BtnChangeExec = "Change"
+    ErrorCurrentPassIncorrect = "Current Master Password is incorrect."
+    ErrorNewPassEmpty = "New Master Password cannot be empty."
+    ErrorConfirmMismatch = "New Master Password confirmation does not match."
+    StatusPassChanged = "Master Password updated successfully."
+    LogPassChanged = "Master Password changed."
+    ErrorPassChangeFailed = "Failed to update Master Password: "
+
+    # CSV Export Dialog
+    CsvNoEntriesMsg = "No entries available to export."
+    CsvNoEntriesTitle = "Export CSV"
+    CsvWarningTitle = "Security Warning"
+    CsvWarningMsg = "Security Warning: Exported CSV files contain unencrypted plaintext passwords. Ensure you store or delete the file securely after use.`n`nDo you wish to proceed?"
+    CsvSaveFilter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*"
+    CsvSaveTitle = "Export Vault Entries to CSV"
+    StatusCsvSuccess = "Exported {0} entries to CSV successfully."
+    LogCsvSuccess = "Vault entries exported to CSV: "
+    MsgCsvSuccess = "CSV export completed successfully."
+    MsgCsvSuccessTitle = "Export CSV"
+    LogCsvFailed = "CSV Export failed"
+    MsgCsvFailed = "Failed to export CSV: "
+    MsgCsvFailedTitle = "Export Error"
+
+    # URL Security
+    UrlBlockMsg = "Opening this URL is blocked for security reasons. Only http:// and https:// URLs are allowed."
+    UrlBlockTitle = "Security Warning"
+    LogUrlBlocked = "Blocked launching unsafe URL: "
+    StatusUrlOpened = "Opened URL in browser: {0}"
+    LogUrlOpened = "Opened URL in default browser: {0}"
+    LogUrlOpenFailed = "Failed to open URL in browser"
+    StatusUrlOpenFailed = "Failed to open URL: {0}"
+}

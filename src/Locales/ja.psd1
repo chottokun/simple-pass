@@ -1,0 +1,106 @@
+﻿@{
+    # Window & General
+    Title = "SimplePASS - パスワード管理ツール"
+    Width = 900
+    FontFamily = "Meiryo, Segoe UI"
+    AppStartLog = "SimplePASS 日本語版 Application Started."
+    FatalLogMsg = "Unhandled AppDomain Exception (JP)"
+
+    # Login Panel
+    LoginSubtitle = "マスターパスワードを入力して保管庫を解除してください"
+    FirstRunSubtitle = "初回起動を検知しました。マスターパスワードを設定してください。"
+    LoginButtonUnlock = "保管庫の解除"
+    LoginButtonCreate = "保管庫の新規作成"
+    LoginPasswordLabel = "マスターパスワード:"
+    EmptyPassError = "マスターパスワードを入力してください。"
+    LoginFailError = "マスターパスワードが正しくないか、データ破損、または旧v1.0形式です。"
+    CreateFailError = "保管庫の作成に失敗しました: "
+    FirstRunSuccessStatus = "マスターパスワードが登録され、保管庫が初期化されました。"
+    UnlockSuccessStatus = "認証成功: {0} 件のエントリを読み込みました。"
+    LoginFailLog = "JP Login / Vault creation failed"
+
+    # Main Grid Actions / Search
+    SearchTooltip = "タイトル、URL、ユーザー名、メモをリアルタイム検索..."
+    BtnAddEntry = "+ 新規エントリ追加"
+    BtnExportCsv = "📥 CSV出力"
+    BtnChangePass = "🔑 パスワード変更"
+    BtnLock = "保管庫をロック"
+    ReadyStatus = "準備完了"
+    LockStatus = "保管庫をロックしました。"
+    AutoLockStatus = "5分間無操作のため自動ロックされました。"
+
+    # DataGrid Columns
+    ColTop = "最上部"
+    ColTitle = "タイトル"
+    ColUser = "ユーザー名 / ID"
+    ColUrl = "URL"
+    ColNote = "メモ"
+    ColActions = "操作"
+
+    # Actions inside DataGrid
+    ToolTipMoveTop = "最上部へ固定"
+    BtnCopyPass = "PASSコピー"
+    BtnCopyUser = "IDコピー"
+    BtnEdit = "編集"
+    BtnDelete = "削除"
+    MsgCopiedPass = "パスワードをクリップボードにコピーしました (30秒後に自動クリアされます)。"
+    MsgCopiedPassLog = "Password copied to clipboard (JP)"
+    MsgCopiedUser = "ユーザーIDをクリップボードにコピーしました。"
+    MsgCopiedUserLog = "Username copied to clipboard (JP)"
+    ConfirmDeleteTitle = "削除確認"
+    ConfirmDeleteMsg = "'{0}' を削除してもよろしいですか？"
+    StatusDeleted = "エントリを削除しました。"
+    StatusMovedTop = "エントリを最上部に移動しました。"
+
+    # Add / Edit Modal
+    ModalTitleAdd = "新規パスワード登録"
+    ModalTitleEdit = "エントリの編集"
+    LabelFormTitle = "タイトル / サービス名:"
+    LabelFormUrl = "URL:"
+    LabelFormUsername = "ユーザー名 / ID:"
+    LabelFormPassword = "パスワード:"
+    BtnGeneratePass = "⚡ ランダム生成"
+    LabelFormNote = "メモ:"
+    BtnSave = "保存"
+    BtnCancel = "キャンセル"
+    ValidationErrorTitle = "入力エラー"
+    ValidationErrorMsg = "タイトルを入力してください。"
+    StatusSaved = "エントリを保存しました。 (合計: {0} 件)"
+
+    # Change Master Password Modal
+    ModalTitleChangePass = "マスターパスワードの変更"
+    LabelCurrentPass = "現在のマスターパスワード:"
+    LabelNewPass = "新しいマスターパスワード:"
+    LabelConfirmNewPass = "新しいマスターパスワード (確認):"
+    BtnChangeExec = "変更実行"
+    ErrorCurrentPassIncorrect = "現在のマスターパスワードが正しくありません。"
+    ErrorNewPassEmpty = "新しいマスターパスワードを入力してください。"
+    ErrorConfirmMismatch = "新しいマスターパスワード（確認）が一致しません。"
+    StatusPassChanged = "マスターパスワードを変更しました。"
+    LogPassChanged = "Master Password changed (JP)."
+    ErrorPassChangeFailed = "マスターパスワードの変更に失敗しました: "
+
+    # CSV Export Dialog
+    CsvNoEntriesMsg = "出力できるエントリがありません。"
+    CsvNoEntriesTitle = "CSV出力"
+    CsvWarningTitle = "セキュリティ確認"
+    CsvWarningMsg = "【セキュリティ上の注意】`nエクスポートされるCSVファイルには暗号化されていない平文のパスワードが含まれます。ファイルの使用後は確実に削除するか、安全な場所へ保管してください。`n`nエクスポートを実行しますか？"
+    CsvSaveFilter = "CSVファイル (*.csv)|*.csv|すべてのファイル (*.*)|*.*"
+    CsvSaveTitle = "保管庫エントリをCSVファイルに出力"
+    StatusCsvSuccess = "{0} 件のエントリをCSVファイルに出力しました。"
+    LogCsvSuccess = "Vault entries exported to CSV (JP): "
+    MsgCsvSuccess = "CSV出力が正常に完了しました。"
+    MsgCsvSuccessTitle = "CSV出力完了"
+    LogCsvFailed = "JP CSV Export failed"
+    MsgCsvFailed = "CSV出力に失敗しました: "
+    MsgCsvFailedTitle = "出力エラー"
+
+    # URL Security
+    UrlBlockMsg = "セキュリティ上の理由により、このURLの起動はブロックされました。http:// および https:// のURLのみ許可されています。"
+    UrlBlockTitle = "セキュリティ警告"
+    LogUrlBlocked = "Blocked launching unsafe URL (JP): "
+    StatusUrlOpened = "ブラウザでURLを開きました: {0}"
+    LogUrlOpened = "Opened URL in default browser (JP): {0}"
+    LogUrlOpenFailed = "Failed to open URL in browser (JP)"
+    StatusUrlOpenFailed = "URLの起動に失敗しました: {0}"
+}
