@@ -109,33 +109,78 @@ function Run-GuiNewFeaturesTests {
         $results.Log += "[FAIL] Test 2: Password Visibility Toggle & Sync - $_"
     }
 
-    # Test 3: Auto-Lock Memory & State Reset Test
+    # Test 3: Lock-VaultApp State Reset and UI Collapsing
     try {
-        $win = New-TestWindow
-        $mainGrid = $win.FindName("MainGrid")
-        $loginPanel = $win.FindName("LoginPanel")
-        $dgEntries = $win.FindName("DgEntries")
+        # Ensure System.Windows.Visibility type exists (especially on Linux)
+        try {
+            $null = [System.Windows.Visibility]
+        } catch {
+            $definition = @'
+            namespace System.Windows {
+                public enum Visibility {
+                    Visible = 0,
+                    Hidden = 1,
+                    Collapsed = 2
+                }
+            }
+'@
+            Add-Type -TypeDefinition $definition -ErrorAction SilentlyContinue
+        }
 
-        # Simulate logged-in state
-        $mainGrid.Visibility = [System.Windows.Visibility]::Visible
-        $loginPanel.Visibility = [System.Windows.Visibility]::Collapsed
-        $dummyEntries = @((New-VaultEntry -Title "Test" -Password "P"))
-        $dgEntries.ItemsSource = $dummyEntries
+        $appScript = Join-Path $srcDir "SimplePASS.ps1"
+        $scriptContent = [System.IO.File]::ReadAllText($appScript, [System.Text.Encoding]::UTF8)
 
-        # Perform simulated Lock action
-        $dgEntries.ItemsSource = $null
-        $mainGrid.Visibility = [System.Windows.Visibility]::Collapsed
-        $loginPanel.Visibility = [System.Windows.Visibility]::Visible
+        # Parse SimplePASS.ps1 and extract Lock-VaultApp function body
+        $ast = [System.Management.Automation.Language.Parser]::ParseInput($scriptContent, [ref]$null, [ref]$null)
+        $funcAst = $ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Lock-VaultApp' }, $true)[0]
+        Assert-True ($null -ne $funcAst) "Lock-VaultApp function AST successfully extracted"
+        $sb = $funcAst.Body.GetScriptBlock()
 
-        Assert-True ($null -eq $dgEntries.ItemsSource) "DataGrid ItemsSource cleared on lock"
-        Assert-True ($mainGrid.Visibility -eq [System.Windows.Visibility]::Collapsed) "MainGrid collapsed on lock"
-        Assert-True ($loginPanel.Visibility -eq [System.Windows.Visibility]::Visible) "LoginPanel visible on lock"
+        # Mock dependent functions
+        $global:StopAutoLockTimerCalled = $false
+        $global:UpdateLoginUIStateCalled = $false
+        function Stop-AutoLockTimer { $global:StopAutoLockTimerCalled = $true }
+        function Update-LoginUIState { $global:UpdateLoginUIStateCalled = $true }
+
+        # Mock script variables
+        $script:MasterPassword = "MySecretMasterPassword"
+        $script:VaultEntries = @("Item1", "Item2")
+
+        # Mock WPF GUI Controls
+        $dgEntries = [PSCustomObject]@{ ItemsSource = @("some", "entries") }
+        $mainGrid = [PSCustomObject]@{ Visibility = [System.Windows.Visibility]::Visible }
+        $entryModal = [PSCustomObject]@{ Visibility = [System.Windows.Visibility]::Visible }
+        $changePassModal = [PSCustomObject]@{ Visibility = [System.Windows.Visibility]::Visible }
+        $loginPanel = [PSCustomObject]@{ Visibility = [System.Windows.Visibility]::Collapsed }
+        $txtStatus = [PSCustomObject]@{ Text = "Initial State" }
+
+        # Execute Lock-VaultApp
+        & $sb -StatusText "Vault locked. (Test)"
+
+        # Assertions
+        Assert-True $global:StopAutoLockTimerCalled "Stop-AutoLockTimer was called"
+        Assert-True $global:UpdateLoginUIStateCalled "Update-LoginUIState was called"
+        Assert-True ($null -eq $script:MasterPassword) "MasterPassword was successfully cleared to null"
+        Assert-True ($script:VaultEntries.Count -eq 0) "VaultEntries was successfully cleared to an empty array"
+        Assert-True ($null -eq $dgEntries.ItemsSource) "DataGrid ItemsSource was cleared to null"
+        Assert-True ($mainGrid.Visibility -eq [System.Windows.Visibility]::Collapsed) "MainGrid was collapsed"
+        Assert-True ($entryModal.Visibility -eq [System.Windows.Visibility]::Collapsed) "EntryModal was collapsed"
+        Assert-True ($changePassModal.Visibility -eq [System.Windows.Visibility]::Collapsed) "ChangePassModal was collapsed"
+        Assert-True ($loginPanel.Visibility -eq [System.Windows.Visibility]::Visible) "LoginPanel was made visible"
+        Assert-True ($txtStatus.Text -eq "Vault locked. (Test)") "txtStatus text was set to the correct custom message"
+
+        # Execute again with default parameter to check default status text
+        $script:MasterPassword = "Secret"
+        $dgEntries.ItemsSource = @("reloaded")
+        & $sb
+
+        Assert-True ($txtStatus.Text -eq "Vault locked.") "Default status text was successfully applied"
 
         $results.Passed++
-        $results.Log += "[PASS] Test 3: Auto-Lock Memory & State Reset Mechanics"
+        $results.Log += "[PASS] Test 3: Lock-VaultApp State Reset and UI Collapsing"
     } catch {
         $results.Failed++
-        $results.Log += "[FAIL] Test 3: Auto-Lock Mechanics - $_"
+        $results.Log += "[FAIL] Test 3: Lock-VaultApp State Reset and UI Collapsing - $_"
     }
 
     # Test 4: URL Scheme Formatting Integration
