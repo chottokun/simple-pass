@@ -117,6 +117,46 @@ function Run-GuiJpTests {
         $results.Log += "[FAIL] Test 2: Lock-VaultApp State Reset and UI Collapsing - $_"
     }
 
+    # Test 3: Update-LoginUIState (Japanese Edition) - first-time setup state and existing vault state
+    try {
+        $jpScript = Join-Path $srcDir "SimplePASS_JP.ps1"
+        $scriptContent = [System.IO.File]::ReadAllText($jpScript, [System.Text.Encoding]::UTF8)
+
+        # Parse SimplePASS_JP.ps1 and extract Update-LoginUIState function body
+        $ast = [System.Management.Automation.Language.Parser]::ParseInput($scriptContent, [ref]$null, [ref]$null)
+        $funcAst = $ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Update-LoginUIState' }, $true)[0]
+        Assert-True ($null -ne $funcAst) "Update-LoginUIState function AST successfully extracted"
+        $sb = $funcAst.Body.GetScriptBlock()
+
+        # Mock dependent functions
+        $global:TestVaultExistsReturnValue = $false
+        function Test-VaultExists { return $global:TestVaultExistsReturnValue }
+
+        # Mock WPF GUI Controls
+        $txtLoginSubtitle = [PSCustomObject]@{ Text = "Initial State" }
+        $btnLogin = [PSCustomObject]@{ Content = "Initial Content" }
+
+        # Case 1: First-time setup (Vault does not exist)
+        $global:TestVaultExistsReturnValue = $false
+        & $sb
+
+        Assert-True ($txtLoginSubtitle.Text -eq "初回起動を検知しました。マスターパスワードを設定してください。") "Subtitle text is set for JP first run"
+        Assert-True ($btnLogin.Content -eq "保管庫の新規作成") "Button content is set for JP first run"
+
+        # Case 2: Existing vault (Vault exists)
+        $global:TestVaultExistsReturnValue = $true
+        & $sb
+
+        Assert-True ($txtLoginSubtitle.Text -eq "マスターパスワードを入力して保管庫を解除してください。") "Subtitle text is set for JP unlock"
+        Assert-True ($btnLogin.Content -eq "保管庫の解除") "Button content is set for JP unlock"
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 3: Update-LoginUIState (JP) state rendering (First run vs Unlock)"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 3: Update-LoginUIState (JP) - $_"
+    }
+
     return $results
 }
 
