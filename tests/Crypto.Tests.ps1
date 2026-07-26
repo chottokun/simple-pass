@@ -147,8 +147,6 @@ function Run-CryptoTests {
         $results.Failed++
         $results.Log += "[FAIL] Test 6: Corrupt vault rejection test - $_"
     }
-
-<<<<<<< HEAD
     # Test 7: Get-HmacSignature - Happy path / Known vector validation
     try {
         $testData = [byte[]]@(10, 11, 12)
