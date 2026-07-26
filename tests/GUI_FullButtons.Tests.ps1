@@ -30,7 +30,49 @@ function Run-GuiFullButtonsTests {
         $scriptContent = Get-Content $appScript -Raw
         $xamlMatch = [regex]::Match($scriptContent, '(?s)\[xml\]\$xaml\s*=\s*@"(.*?)"@')
         $xamlStr = $xamlMatch.Groups[1].Value
-        [xml]$xmlObj = $xamlStr
+
+        $res = [PSCustomObject]@{
+            Title = "SimplePASS - Password Manager"
+            Width = 900
+            FontFamily = "Segoe UI"
+            LoginSubtitle = "Enter your Master Password to unlock"
+            LoginPasswordLabel = "Master Password:"
+            LoginButtonUnlock = "Unlock Vault"
+            SearchTooltip = "Search..."
+            BtnAddEntry = "+ Add New Entry"
+            BtnExportCsv = "Export CSV"
+            BtnChangePass = "Change Master Password"
+            BtnLock = "Lock Vault"
+            ColTop = "Top"
+            ColTitle = "Title"
+            ColUser = "Username"
+            ColUrl = "URL"
+            ColNote = "Note"
+            ColActions = "Actions"
+            BtnCopyPass = "Copy PASS"
+            BtnCopyUser = "Copy ID"
+            BtnEdit = "Edit"
+            BtnDelete = "Delete"
+            ReadyStatus = "Ready"
+            ModalTitleEdit = "Edit Entry"
+            LabelFormTitle = "Title:"
+            LabelFormUrl = "URL:"
+            LabelFormUsername = "Username:"
+            LabelFormPassword = "Password:"
+            BtnGeneratePass = "Generate"
+            LabelFormNote = "Note:"
+            BtnSave = "Save"
+            BtnCancel = "Cancel"
+            ModalTitleChangePass = "Change Master Password"
+            LabelCurrentPass = "Current Password:"
+            LabelNewPass = "New Password:"
+            LabelConfirmNewPass = "Confirm Password:"
+            BtnChangeExec = "Change Password"
+            BtnCancelModal = "Cancel"
+        }
+
+        $expandedXaml = $ExecutionContext.InvokeCommand.ExpandString($xamlStr)
+        [xml]$xmlObj = $expandedXaml
         $reader = (New-Object System.Xml.XmlNodeReader $xmlObj)
         $window = [Windows.Markup.XamlReader]::Load($reader)
 

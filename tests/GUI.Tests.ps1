@@ -73,12 +73,55 @@ function Run-GuiTests {
 
         $scriptContent = Get-Content $appScript -Raw
         
-        # Extract XAML string from script
+        # Extract XAML string template from script
         $xamlMatch = [regex]::Match($scriptContent, '(?s)\[xml\]\$xaml\s*=\s*@"(.*?)"@')
         Assert-True $xamlMatch.Success "XAML string extracted from SimplePASS.ps1"
 
         $xamlStr = $xamlMatch.Groups[1].Value
-        [xml]$xmlObj = $xamlStr
+
+        # Mock English resource dictionary for XAML expansion
+        $res = [PSCustomObject]@{
+            Title = "SimplePASS - Password Manager"
+            Width = 900
+            FontFamily = "Segoe UI"
+            LoginSubtitle = "Enter your Master Password to unlock"
+            LoginPasswordLabel = "Master Password:"
+            LoginButtonUnlock = "Unlock Vault"
+            SearchTooltip = "Search..."
+            BtnAddEntry = "+ Add New Entry"
+            BtnExportCsv = "Export CSV"
+            BtnChangePass = "Change Master Password"
+            BtnLock = "Lock Vault"
+            ColTop = "Top"
+            ColTitle = "Title"
+            ColUser = "Username"
+            ColUrl = "URL"
+            ColNote = "Note"
+            ColActions = "Actions"
+            BtnCopyPass = "Copy PASS"
+            BtnCopyUser = "Copy ID"
+            BtnEdit = "Edit"
+            BtnDelete = "Delete"
+            ReadyStatus = "Ready"
+            ModalTitleEdit = "Edit Entry"
+            LabelFormTitle = "Title:"
+            LabelFormUrl = "URL:"
+            LabelFormUsername = "Username:"
+            LabelFormPassword = "Password:"
+            BtnGeneratePass = "Generate"
+            LabelFormNote = "Note:"
+            BtnSave = "Save"
+            BtnCancel = "Cancel"
+            ModalTitleChangePass = "Change Master Password"
+            LabelCurrentPass = "Current Password:"
+            LabelNewPass = "New Password:"
+            LabelConfirmNewPass = "Confirm Password:"
+            BtnChangeExec = "Change Password"
+            BtnCancelModal = "Cancel"
+        }
+
+        $expandedXaml = $ExecutionContext.InvokeCommand.ExpandString($xamlStr)
+        [xml]$xmlObj = $expandedXaml
         $reader = (New-Object System.Xml.XmlNodeReader $xmlObj)
         $windowObj = [Windows.Markup.XamlReader]::Load($reader)
 
@@ -104,9 +147,16 @@ function Run-GuiTests {
         Assert-True ($null -ne $funcAst) "Update-LoginUIState function AST successfully extracted"
         $sb = $funcAst.Body.GetScriptBlock()
 
-        # Mock dependent functions
+        # Mock dependent functions & resources
         $global:TestVaultExistsReturnValue = $false
         function Test-VaultExists { return $global:TestVaultExistsReturnValue }
+
+        $res = [PSCustomObject]@{
+            FirstRunSubtitle = "First run detected. Create your Master Password."
+            LoginSubtitle = "Enter your Master Password to unlock"
+            LoginButtonCreate = "Create Vault"
+            LoginButtonUnlock = "Unlock Vault"
+        }
 
         # Mock WPF GUI Controls
         $txtLoginSubtitle = [PSCustomObject]@{ Text = "Initial State" }
