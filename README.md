@@ -1,4 +1,4 @@
-﻿# SimplePASS 🔐
+# SimplePASS 🔐
 
 [![SimplePASS CI Workflow](https://github.com/chottokun/simple-pass/actions/workflows/ci.yml/badge.svg)](https://github.com/chottokun/simple-pass/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -94,10 +94,10 @@ SimplePASS/
 │   ├── UtilsModule.psm1                  # クリップボード自動消去 & パスワード生成器
 │   └── LoggerModule.psm1                 # エラーログ・例外追跡モジュール
 └── tests/
-    ├── RunAllTests.ps1                   # 全自動統合テストランナー (全64項目)
+    ├── RunAllTests.ps1                   # 全自動統合テストランナー (全66項目)
     ├── Crypto.Tests.ps1                  # 暗号 (AES/HMAC/PBKDF2/Salt/DPAPI) 23テスト
-    ├── Vault.Tests.ps1                   # CRUD・CSV出力・順序操作・URLセキュリティ 14テスト
-    ├── Utils.Tests.ps1                   # パスワード生成・クリップボード・境界値 5テスト
+    ├── Vault.Tests.ps1                   # CRUD・CSV出力・順序操作・URL/不完全プロパティ耐性 15テスト
+    ├── Utils.Tests.ps1                   # パスワード生成・クリップボード非同期消去・リトライ・境界値 6テスト
     ├── GUI.Tests.ps1                     # DataGrid バインディング・XAML パース・LoginUIState 4テスト
     ├── GUI_FullButtons.Tests.ps1         # フル UI ボタンインタラクション 1テスト
     ├── GUI_CriticalUserOperations.Tests.ps1 # 再認証・0件検索復帰 2テスト
@@ -111,7 +111,7 @@ SimplePASS/
 
 ## テスト (Testing)
 
-全64項目の自動テストスイートを含む。AST 構文解析・全ファイル UTF-8 BOM 適合検証・`PSScriptAnalyzer` 静的コード解析も実行される。
+全66項目の自動テストスイートを含む。AST 構文解析・全ファイル UTF-8 BOM 適合検証・`PSScriptAnalyzer` 静的コード解析も実行される。
 GitHub Actions CI (`windows-latest`) で push / PR 時に自動実行される。
 
 ```powershell
@@ -123,8 +123,8 @@ powershell -ExecutionPolicy Bypass -File "tests\RunAllTests.ps1"
 | テストファイル | 項目数 | 対象 |
 |---|---|---|
 | Crypto.Tests.ps1 | 23 | AES-256, HMAC-SHA256, PBKDF2, Salt, DPAPI |
-| Vault.Tests.ps1 | 14 | CRUD, CSV出力, 順序操作, URL セキュリティ |
-| Utils.Tests.ps1 | 5 | パスワード生成, クリップボード, 境界値 |
+| Vault.Tests.ps1 | 15 | CRUD, CSV出力, 順序操作, URL/不完全プロパティ耐性 |
+| Utils.Tests.ps1 | 6 | パスワード生成, クリップボード非同期消去・リトライ, 境界値 |
 | GUI.Tests.ps1 | 4 | DataGrid, XAML パース, LoginUIState |
 | GUI_FullButtons.Tests.ps1 | 1 | フル UI ボタンワークフロー |
 | GUI_CriticalUserOperations.Tests.ps1 | 2 | 再認証, 0件検索復帰 |
@@ -132,7 +132,7 @@ powershell -ExecutionPolicy Bypass -File "tests\RunAllTests.ps1"
 | GUI_NewFeatures.Tests.ps1 | 7 | パスワード変更, 表示トグル, AutoLockTimer |
 | EncodingAndSyntax.Tests.ps1 | 3 | AST 構文, UTF-8 BOM, PSScriptAnalyzer |
 | Logger.Tests.ps1 | 2 | ログ記録, 例外スタックトレース |
-| **合計** | **64** | |
+| **合計** | **66** | |
 
 ---
 

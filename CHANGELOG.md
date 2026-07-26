@@ -2,6 +2,19 @@
 
 All notable changes to the **SimplePASS** project will be documented in this file.
 
+## [2.1.0] - 2026-07-26
+
+### Performance & Optimization
+- **Native .NET Cryptographic Constructors**: Refactored `CryptoModule` to use direct `[Type]::new()` constructors for `byte[]`, `Rfc2898DeriveBytes`, and `HMACSHA256`, eliminating reflection and COM overhead.
+- **Asynchronous STA Runspace Clipboard Clearing**: Replaced process-heavy `Start-Job` calls in `UtilsModule` with lightweight background STA Runspaces for clipboard auto-clearing.
+- **Fast Dot-Notation Property Access**: Optimized object property resolution in `VaultModule` for `Search-VaultEntries` and `Export-VaultToCsv`.
+
+### Resilience & Testing Enhancements
+- **Transient Clipboard Lock Retry**: Implemented a 3-attempt retry loop with 50ms intervals in `Set-ClipboardWithAutoClear` to handle background thread and system clipboard locking seamlessly.
+- **Incomplete Object Property Resilience**: Added TDD test coverage (`Vault.Tests.ps1` Test 15) ensuring graceful handling of partial PSCustomObjects and Hashtables with missing properties.
+- **Async Runspace Non-blocking Test**: Added TDD test coverage (`Utils.Tests.ps1` Test 6) for background STA runspace execution without UI thread blocking.
+- **Expanded Test Suite**: Total automated test suite expanded to 66 tests (100% pass rate).
+
 ## [2.0.0] - 2026-07-25
 
 ### Added
