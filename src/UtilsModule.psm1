@@ -1,5 +1,12 @@
-﻿Add-Type -AssemblyName PresentationCore
-Add-Type -AssemblyName System.Windows.Forms
+﻿$isWindowsPlatform = ($env:OS -eq 'Windows_NT') -or ($PSVersionTable.PSEdition -eq 'Desktop')
+try {
+    $isWindowsPlatform = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
+} catch {}
+
+if ($isWindowsPlatform) {
+    Add-Type -AssemblyName PresentationCore
+    Add-Type -AssemblyName System.Windows.Forms
+}
 
 function Get-SecureRandomInt {
     [CmdletBinding()]

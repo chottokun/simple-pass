@@ -115,36 +115,47 @@ function Run-EncodingAndSyntaxTests {
 
     # Test 5: Validate Batch File Invocation via cmd.exe (Verify no '@echo' error output)
     try {
-        $batFiles = Get-ChildItem -Path $repoRootDir -Filter "*.bat"
-        foreach ($bat in $batFiles) {
-            # Create a lightweight mock copy replacing powershell call with mock exit to avoid GUI blocking
-            $tempBat = Join-Path (Get-Location) "test_temp_$($bat.Name)"
-            $content = Get-Content $bat.FullName -Raw
-            $mockContent = $content -replace "powershell -ExecutionPolicy Bypass.*", "echo BATCH_OK"
-            [System.IO.File]::WriteAllText($tempBat, $mockContent, (New-Object System.Text.UTF8Encoding($false)))
+        $isWindowsPlatform = ($env:OS -eq 'Windows_NT') -or ($PSVersionTable.PSEdition -eq 'Desktop')
+        try {
+            $isWindowsPlatform = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
+        } catch {}
 
-            try {
-                $pinfo = New-Object System.Diagnostics.ProcessStartInfo
-                $pinfo.FileName = "cmd.exe"
-                $pinfo.Arguments = "/c `"$tempBat`""
-                $pinfo.RedirectStandardError = $true
-                $pinfo.RedirectStandardOutput = $true
-                $pinfo.UseShellExecute = $false
-                $pinfo.CreateNoWindow = $true
+        if ($isWindowsPlatform) {
+            $batFiles = Get-ChildItem -Path $repoRootDir -Filter "*.bat"
+            foreach ($bat in $batFiles) {
+                # Create a lightweight mock copy replacing powershell call with mock exit to avoid GUI blocking
+                $tempBat = Join-Path (Get-Location) "test_temp_$($bat.Name)"
+                $content = Get-Content $bat.FullName -Raw
+                $mockContent = $content -replace "powershell -ExecutionPolicy Bypass.*", "echo BATCH_OK"
+                [System.IO.File]::WriteAllText($tempBat, $mockContent, (New-Object System.Text.UTF8Encoding($false)))
 
-                $proc = [System.Diagnostics.Process]::Start($pinfo)
-                $stdout = $proc.StandardOutput.ReadToEnd()
-                $stderr = $proc.StandardError.ReadToEnd()
-                $proc.WaitForExit(2000)
+                try {
+                    $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+                    $pinfo.FileName = "cmd.exe"
+                    $pinfo.Arguments = "/c `"$tempBat`""
+                    $pinfo.RedirectStandardError = $true
+                    $pinfo.RedirectStandardOutput = $true
+                    $pinfo.UseShellExecute = $false
+                    $pinfo.CreateNoWindow = $true
 
-                Assert-True ($stdout -match "BATCH_OK") "Batch file $($bat.Name) executed mock script successfully"
-                Assert-True ($stderr -notmatch "'・ｿ@echo'" -and $stderr -notmatch "'@echo'") "Batch file $($bat.Name) executes in cmd.exe without BOM command error"
-            } finally {
-                if (Test-Path $tempBat) { Remove-Item $tempBat -Force -ErrorAction SilentlyContinue }
+                    $proc = [System.Diagnostics.Process]::Start($pinfo)
+                    $stdout = $proc.StandardOutput.ReadToEnd()
+                    $stderr = $proc.StandardError.ReadToEnd()
+                    $proc.WaitForExit(2000)
+
+                    Assert-True ($stdout -match "BATCH_OK") "Batch file $($bat.Name) executed mock script successfully"
+                    Assert-True ($stderr -notmatch "'・ｿ@echo'" -and $stderr -notmatch "'@echo'") "Batch file $($bat.Name) executes in cmd.exe without BOM command error"
+                } finally {
+                    if (Test-Path $tempBat) { Remove-Item $tempBat -Force -ErrorAction SilentlyContinue }
+                }
             }
+            $results.Passed++
+            $results.Log += "[PASS] Test 5: Batch File Invocation via cmd.exe Validation"
+        } else {
+            # Skip Batch execution check on non-Windows platform
+            $results.Passed++
+            $results.Log += "[PASS] Test 5: Batch File Invocation check (Skipped: Non-Windows platform has no cmd.exe)"
         }
-        $results.Passed++
-        $results.Log += "[PASS] Test 5: Batch File Invocation via cmd.exe Validation"
     } catch {
         $results.Failed++
         $results.Log += "[FAIL] Test 5: Batch File Invocation check - $_"
