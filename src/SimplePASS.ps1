@@ -28,7 +28,8 @@ $res = [PSCustomObject]$resObj
 
 # --- App-wide Exception & Log Management ---
 [System.AppDomain]::CurrentDomain.add_UnhandledException([System.UnhandledExceptionEventHandler]{
-    param($sender, $e)
+    param($eventSender, $e)
+    [void]$eventSender
     if ($e.ExceptionObject -is [System.Exception]) {
         Write-AppLog -Level FATAL -Message $res.FatalLogMsg -Exception $e.ExceptionObject
     }
@@ -176,6 +177,13 @@ Write-AppLog -Level INFO -Message $res.AppStartLog
                         <Button x:Name="BtnTogglePassVisibility" Grid.Column="1" Content="👁" Width="30" Height="30" Margin="5,0,0,0" Background="#BDC3C7" Foreground="White" BorderThickness="0" Cursor="Hand"/>
                     </Grid>
 
+                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                        <CheckBox x:Name="ChkGenUpper" Content="$($res.OptUpper)" IsChecked="True" Margin="0,0,15,0" Foreground="#34495E"/>
+                        <CheckBox x:Name="ChkGenLower" Content="$($res.OptLower)" IsChecked="True" Margin="0,0,15,0" Foreground="#34495E"/>
+                        <CheckBox x:Name="ChkGenDigit" Content="$($res.OptDigit)" IsChecked="True" Margin="0,0,15,0" Foreground="#34495E"/>
+                        <CheckBox x:Name="ChkGenSymbol" Content="$($res.OptSymbol)" IsChecked="True" Foreground="#34495E"/>
+                    </StackPanel>
+
                     <TextBlock Text="$($res.LabelFormNote)" Margin="0,8,0,2"/>
                     <TextBox x:Name="TxtFormNote" Height="50" Padding="5" TextWrapping="Wrap" AcceptsReturn="True"/>
 
@@ -253,6 +261,10 @@ $txtFormPassword = $window.FindName("TxtFormPassword")
 $btnTogglePassVisibility = $window.FindName("BtnTogglePassVisibility")
 $txtFormNote = $window.FindName("TxtFormNote")
 $btnGeneratePass = $window.FindName("BtnGeneratePass")
+$chkGenUpper = $window.FindName("ChkGenUpper")
+$chkGenLower = $window.FindName("ChkGenLower")
+$chkGenDigit = $window.FindName("ChkGenDigit")
+$chkGenSymbol = $window.FindName("ChkGenSymbol")
 $btnSaveEntry = $window.FindName("BtnSave")
 $btnCancelModal = $window.FindName("BtnCancelModal")
 
@@ -332,7 +344,8 @@ function Lock-VaultApp {
 
 # PasswordBox Enter key login
 $pbMasterPassword.Add_KeyDown({
-    param($sender, $e)
+    param($eventSender, $e)
+    [void]$eventSender
     if ($e.Key -eq [System.Windows.Input.Key]::Enter) {
         $btnLogin.RaiseEvent((New-Object System.Windows.RoutedEventArgs([System.Windows.Controls.Primitives.ButtonBase]::ClickEvent)))
     }
@@ -349,6 +362,10 @@ $btnLogin.Add_Click({
     try {
         $isFirstRun = -not (Test-VaultExists)
         if ($isFirstRun) {
+            if (-not (Test-PasswordStrength -Password $inputPass)) {
+                $txtLoginError.Text = $res.ErrorWeakPassword
+                return
+            }
             $script:VaultEntries = @()
             Save-Vault -Entries $script:VaultEntries -MasterPassword $inputPass
         } else {
@@ -447,6 +464,10 @@ $btnSaveNewPass.Add_Click({
         $txtChangePassError.Text = $res.ErrorConfirmMismatch
         return
     }
+    if (-not (Test-PasswordStrength -Password $pbNewPass.Password)) {
+        $txtChangePassError.Text = $res.ErrorWeakPassword
+        return
+    }
 
     try {
         $script:MasterPassword = $pbNewPass.Password
@@ -497,9 +518,17 @@ $btnTogglePassVisibility.Add_Click({
 
 # Generate Password Button
 $btnGeneratePass.Add_Click({
-    $newPass = New-RandomPassword -Length 16
-    $pbFormPassword.Password = $newPass
-    $txtFormPassword.Text = $newPass
+    try {
+        $incUp = [bool]$chkGenUpper.IsChecked
+        $incLow = [bool]$chkGenLower.IsChecked
+        $incDig = [bool]$chkGenDigit.IsChecked
+        $incSym = [bool]$chkGenSymbol.IsChecked
+        $newPass = New-RandomPassword -Length 16 -IncludeUppercase:$incUp -IncludeLowercase:$incLow -IncludeNumbers:$incDig -IncludeSymbols:$incSym
+        $pbFormPassword.Password = $newPass
+        $txtFormPassword.Text = $newPass
+    } catch {
+        [System.Windows.MessageBox]::Show($_.Exception.Message, $res.ValidationErrorTitle, "OK", "Error") | Out-Null
+    }
 })
 
 # Save Entry Button
@@ -534,7 +563,8 @@ $btnSaveEntry.Add_Click({
 
 # DataGrid Row Actions via Event Routing
 $window.AddHandler([System.Windows.Documents.Hyperlink]::RequestNavigateEvent, [System.Windows.Navigation.RequestNavigateEventHandler]{
-    param($sender, $e)
+    param($eventSender, $e)
+    [void]$eventSender
     try {
         $rawUrl = $e.Uri.OriginalString
         $targetUrl = Format-VaultUrl -Url $rawUrl
@@ -557,7 +587,8 @@ $window.AddHandler([System.Windows.Documents.Hyperlink]::RequestNavigateEvent, [
 })
 
 $window.AddHandler([System.Windows.Controls.Primitives.ButtonBase]::ClickEvent, [System.Windows.RoutedEventHandler]{
-    param($sender, $e)
+    param($eventSender, $e)
+    [void]$eventSender
     $source = $e.OriginalSource
     if ($null -eq $source -or $source -isnot [System.Windows.Controls.Button]) { return }
 

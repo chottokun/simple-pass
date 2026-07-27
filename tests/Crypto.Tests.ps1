@@ -283,12 +283,12 @@ function Run-CryptoTests {
         $results.Log += "[FAIL] Test 13: New-CryptoSalt invalid inputs - $_"
     }
 
-    # Test 14: Derive-KeyIVAndHmac Happy Path
+    # Test 14: Get-DerivedKeyIVAndHmac Happy Path
     try {
         $pwd = "SecureMasterPassword1!"
         $salt = [System.Text.Encoding]::UTF8.GetBytes("SuperSecretSaltValue123456789012")
 
-        $derived = Derive-KeyIVAndHmac -Password $pwd -Salt $salt
+        $derived = Get-DerivedKeyIVAndHmac -Password $pwd -Salt $salt
 
         Assert-True ($null -ne $derived) "Derived result is not null"
         Assert-True ($derived.AesKey.Length -eq 32) "AES key length is exactly 32 bytes"
@@ -299,19 +299,19 @@ function Run-CryptoTests {
         Assert-True ($derived.HmacKey -is [byte[]]) "HMAC key is a byte array"
 
         $results.Passed++
-        $results.Log += "[PASS] Test 14: Derive-KeyIVAndHmac Happy Path and Key Lengths"
+        $results.Log += "[PASS] Test 14: Get-DerivedKeyIVAndHmac Happy Path and Key Lengths"
     } catch {
         $results.Failed++
-        $results.Log += "[FAIL] Test 14: Derive-KeyIVAndHmac Happy Path - $_"
+        $results.Log += "[FAIL] Test 14: Get-DerivedKeyIVAndHmac Happy Path - $_"
     }
 
-    # Test 15: Derive-KeyIVAndHmac Determinism
+    # Test 15: Get-DerivedKeyIVAndHmac Determinism
     try {
         $pwd = "DeterministicPwd"
         $salt = [System.Text.Encoding]::UTF8.GetBytes("SomeSaltForDeterminismTesting")
 
-        $derived1 = Derive-KeyIVAndHmac -Password $pwd -Salt $salt
-        $derived2 = Derive-KeyIVAndHmac -Password $pwd -Salt $salt
+        $derived1 = Get-DerivedKeyIVAndHmac -Password $pwd -Salt $salt
+        $derived2 = Get-DerivedKeyIVAndHmac -Password $pwd -Salt $salt
 
         # Verify AES Key matches
         $keysMatch = $true
@@ -341,22 +341,22 @@ function Run-CryptoTests {
         Assert-True $hmacKeysMatch "Deterministic HMAC keys match exactly"
 
         $results.Passed++
-        $results.Log += "[PASS] Test 15: Derive-KeyIVAndHmac Determinism"
+        $results.Log += "[PASS] Test 15: Get-DerivedKeyIVAndHmac Determinism"
     } catch {
         $results.Failed++
-        $results.Log += "[FAIL] Test 15: Derive-KeyIVAndHmac Determinism - $_"
+        $results.Log += "[FAIL] Test 15: Get-DerivedKeyIVAndHmac Determinism - $_"
     }
 
-    # Test 16: Derive-KeyIVAndHmac Input Sensitivity (Different Inputs produce Different Outputs)
+    # Test 16: Get-DerivedKeyIVAndHmac Input Sensitivity (Different Inputs produce Different Outputs)
     try {
         $pwd1 = "PasswordOne"
         $pwd2 = "PasswordTwo"
         $salt1 = [System.Text.Encoding]::UTF8.GetBytes("SaltNumberOne")
         $salt2 = [System.Text.Encoding]::UTF8.GetBytes("SaltNumberTwo")
 
-        $derived1 = Derive-KeyIVAndHmac -Password $pwd1 -Salt $salt1
-        $derived2 = Derive-KeyIVAndHmac -Password $pwd2 -Salt $salt1
-        $derived3 = Derive-KeyIVAndHmac -Password $pwd1 -Salt $salt2
+        $derived1 = Get-DerivedKeyIVAndHmac -Password $pwd1 -Salt $salt1
+        $derived2 = Get-DerivedKeyIVAndHmac -Password $pwd2 -Salt $salt1
+        $derived3 = Get-DerivedKeyIVAndHmac -Password $pwd1 -Salt $salt2
 
         # Compare pwd1 vs pwd2 with same salt
         $diffPwdKeys = $false
@@ -379,19 +379,19 @@ function Run-CryptoTests {
         Assert-True $diffSaltKeys "Different salts produce different AES keys"
 
         $results.Passed++
-        $results.Log += "[PASS] Test 16: Derive-KeyIVAndHmac Input Sensitivity"
+        $results.Log += "[PASS] Test 16: Get-DerivedKeyIVAndHmac Input Sensitivity"
     } catch {
         $results.Failed++
-        $results.Log += "[FAIL] Test 16: Derive-KeyIVAndHmac Input Sensitivity - $_"
+        $results.Log += "[FAIL] Test 16: Get-DerivedKeyIVAndHmac Input Sensitivity - $_"
     }
 
-    # Test 17: Derive-KeyIVAndHmac Iteration Parameter Sensitivity
+    # Test 17: Get-DerivedKeyIVAndHmac Iteration Parameter Sensitivity
     try {
         $pwd = "IterationTestPwd"
         $salt = [System.Text.Encoding]::UTF8.GetBytes("IterationTestSalt")
 
-        $derived1 = Derive-KeyIVAndHmac -Password $pwd -Salt $salt -Iterations 1000
-        $derived2 = Derive-KeyIVAndHmac -Password $pwd -Salt $salt -Iterations 2000
+        $derived1 = Get-DerivedKeyIVAndHmac -Password $pwd -Salt $salt -Iterations 1000
+        $derived2 = Get-DerivedKeyIVAndHmac -Password $pwd -Salt $salt -Iterations 2000
 
         # Verify they produce different outputs due to different iterations
         $diffIterationKeys = $false
@@ -404,10 +404,10 @@ function Run-CryptoTests {
         Assert-True $diffIterationKeys "Different iterations produce different AES keys"
 
         $results.Passed++
-        $results.Log += "[PASS] Test 17: Derive-KeyIVAndHmac Iterations Sensitivity"
+        $results.Log += "[PASS] Test 17: Get-DerivedKeyIVAndHmac Iterations Sensitivity"
     } catch {
         $results.Failed++
-        $results.Log += "[FAIL] Test 17: Derive-KeyIVAndHmac Iterations Sensitivity - $_"
+        $results.Log += "[FAIL] Test 17: Get-DerivedKeyIVAndHmac Iterations Sensitivity - $_"
     }
 
     # Test 18: Direct AES Round-trip Encryption & Decryption (Protect-DataWithAes & Unprotect-DataWithAes)

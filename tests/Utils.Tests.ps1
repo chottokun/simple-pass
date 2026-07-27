@@ -124,6 +124,23 @@ function Run-UtilsTests {
         $results.Log += "[FAIL] Test 6: Asynchronous STA Runspace Clipboard Auto-Clear test - $_"
     }
 
+    # Test 7: Test-PasswordStrength validation (min 8 chars & 3+ char categories)
+    try {
+        Assert-True (-not (Test-PasswordStrength -Password "short")) "Rejects passwords shorter than 8 characters"
+        Assert-True (-not (Test-PasswordStrength -Password "12345678")) "Rejects single category passwords"
+        Assert-True (-not (Test-PasswordStrength -Password "abcdefgh")) "Rejects single category letters"
+        Assert-True (-not (Test-PasswordStrength -Password "abcdef12")) "Rejects 2 category passwords (lowercase + digits)"
+        Assert-True (Test-PasswordStrength -Password "Abcdef12") "Accepts 3 category passwords (upper + lower + digit)"
+        Assert-True (Test-PasswordStrength -Password "abcdef1!") "Accepts 3 category passwords (lower + digit + symbol)"
+        Assert-True (Test-PasswordStrength -Password "P@ssword1") "Accepts 4 category passwords"
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 7: Test-PasswordStrength validation"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 7: Test-PasswordStrength validation - $_"
+    }
+
     return $results
 }
 

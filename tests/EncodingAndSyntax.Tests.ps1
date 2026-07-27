@@ -39,25 +39,35 @@ function Run-EncodingAndSyntaxTests {
         $results.Log += "[FAIL] Test 1: AST Syntax Error check - $_"
     }
 
-    # Test 2: Ensure ALL PowerShell script and Batch files strictly have UTF-8 BOM (Universal Policy)
+    # Test 2: Ensure PowerShell scripts (.ps1, .psm1, .psd1) have UTF-8 BOM, while Batch (.bat) files strictly have NO BOM (cmd.exe compatibility)
     try {
         $missingBomFiles = @()
-        $scriptAndBatFiles = Get-ChildItem -Path $repoRootDir -Recurse -Include *.ps1,*.psm1,*.bat
-
-        foreach ($file in $scriptAndBatFiles) {
+        $scriptFiles = Get-ChildItem -Path $repoRootDir -Recurse -Include *.ps1,*.psm1,*.psd1
+        foreach ($file in $scriptFiles) {
             $bytes = [System.IO.File]::ReadAllBytes($file.FullName)
             $hasBom = ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF)
             if (-not $hasBom) {
                 $missingBomFiles += $file.Name
             }
         }
+        Assert-True ($missingBomFiles.Count -eq 0) "All PowerShell scripts (.ps1, .psm1, .psd1) strictly have UTF-8 BOM (Missing in: $($missingBomFiles -join ', '))"
 
-        Assert-True ($missingBomFiles.Count -eq 0) "All script & batch files strictly have UTF-8 BOM (Missing in: $($missingBomFiles -join ', '))"
+        $unexpectedBomBatFiles = @()
+        $batFiles = Get-ChildItem -Path $repoRootDir -Recurse -Include *.bat
+        foreach ($file in $batFiles) {
+            $bytes = [System.IO.File]::ReadAllBytes($file.FullName)
+            $hasBom = ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF)
+            if ($hasBom) {
+                $unexpectedBomBatFiles += $file.Name
+            }
+        }
+        Assert-True ($unexpectedBomBatFiles.Count -eq 0) "All Batch files (.bat) strictly have NO BOM for cmd.exe compatibility (Has BOM in: $($unexpectedBomBatFiles -join ', '))"
+
         $results.Passed++
-        $results.Log += "[PASS] Test 2: Universal UTF-8 BOM Compliance across all $($scriptAndBatFiles.Count) script and batch files"
+        $results.Log += "[PASS] Test 2: Encoding Compliance (PowerShell UTF-8 BOM & Batch No-BOM)"
     } catch {
         $results.Failed++
-        $results.Log += "[FAIL] Test 2: Universal UTF-8 BOM compliance check - $_"
+        $results.Log += "[FAIL] Test 2: Encoding Compliance check - $_"
     }
 
     # Test 3: PSScriptAnalyzer Linter Integration Check (if installed)
@@ -82,6 +92,62 @@ function Run-EncodingAndSyntaxTests {
     } catch {
         $results.Failed++
         $results.Log += "[FAIL] Test 3: PSScriptAnalyzer Linter Audit - $_"
+    }
+
+    # Test 4: Validate all .psd1 localization resource files for Import-PowerShellDataFile parsing
+    try {
+        $psd1Files = Get-ChildItem -Path $repoRootDir -Recurse -Include *.psd1
+        $psd1ParseErrors = @()
+        foreach ($file in $psd1Files) {
+            try {
+                $null = Import-PowerShellDataFile -Path $file.FullName -ErrorAction Stop
+            } catch {
+                $psd1ParseErrors += "$($file.Name): $($_.Exception.Message)"
+            }
+        }
+        Assert-True ($psd1ParseErrors.Count -eq 0) "All .psd1 files imported without errors ($($psd1ParseErrors -join ', '))"
+        $results.Passed++
+        $results.Log += "[PASS] Test 4: All .psd1 Data Files Parse Cleanly with Import-PowerShellDataFile"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 4: .psd1 Data File Import check - $_"
+    }
+
+    # Test 5: Validate Batch File Invocation via cmd.exe (Verify no '@echo' error output)
+    try {
+        $batFiles = Get-ChildItem -Path $repoRootDir -Filter "*.bat"
+        foreach ($bat in $batFiles) {
+            # Create a lightweight mock copy replacing powershell call with mock exit to avoid GUI blocking
+            $tempBat = Join-Path (Get-Location) "test_temp_$($bat.Name)"
+            $content = Get-Content $bat.FullName -Raw
+            $mockContent = $content -replace "powershell -ExecutionPolicy Bypass.*", "echo BATCH_OK"
+            [System.IO.File]::WriteAllText($tempBat, $mockContent, (New-Object System.Text.UTF8Encoding($false)))
+
+            try {
+                $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+                $pinfo.FileName = "cmd.exe"
+                $pinfo.Arguments = "/c `"$tempBat`""
+                $pinfo.RedirectStandardError = $true
+                $pinfo.RedirectStandardOutput = $true
+                $pinfo.UseShellExecute = $false
+                $pinfo.CreateNoWindow = $true
+
+                $proc = [System.Diagnostics.Process]::Start($pinfo)
+                $stdout = $proc.StandardOutput.ReadToEnd()
+                $stderr = $proc.StandardError.ReadToEnd()
+                $proc.WaitForExit(2000)
+
+                Assert-True ($stdout -match "BATCH_OK") "Batch file $($bat.Name) executed mock script successfully"
+                Assert-True ($stderr -notmatch "'・ｿ@echo'" -and $stderr -notmatch "'@echo'") "Batch file $($bat.Name) executes in cmd.exe without BOM command error"
+            } finally {
+                if (Test-Path $tempBat) { Remove-Item $tempBat -Force -ErrorAction SilentlyContinue }
+            }
+        }
+        $results.Passed++
+        $results.Log += "[PASS] Test 5: Batch File Invocation via cmd.exe Validation"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 5: Batch File Invocation check - $_"
     }
 
     return $results

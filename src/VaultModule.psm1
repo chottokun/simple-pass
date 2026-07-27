@@ -2,7 +2,9 @@
 if (-not $moduleDir) { $moduleDir = Split-Path -Parent $MyInvocation.MyCommand.Path }
 if ($moduleDir) {
     Import-Module (Join-Path $moduleDir "CryptoModule.psm1") -DisableNameChecking -Force
+    Import-Module (Join-Path $moduleDir "LoggerModule.psm1") -DisableNameChecking -Force
 }
+
 
 function Get-DefaultVaultPath {
     $scriptDir = Split-Path -Parent $PSScriptRoot
@@ -47,12 +49,23 @@ function Save-Vault {
         New-Item -ItemType Directory -Path $parentDir -Force | Out-Null
     }
 
-    # Automatic Backup (.bak) of existing vault file before overwriting
+    # Automatic Multi-generation Backup (.bak) of existing vault file before overwriting
     if (Test-Path $Path) {
         try {
-            $bakPath = "$Path.bak"
+            $timestamp = (Get-Date).ToString("yyyyMMdd_HHmmss_fff")
+            $bakPath = "$Path.$timestamp.bak"
             Copy-Item -Path $Path -Destination $bakPath -Force -ErrorAction SilentlyContinue
-        } catch {}
+
+            # Maintain maximum 5 generations of backups, cleanup older ones
+            $dirName = Split-Path -Parent $Path
+            $fileName = Split-Path -Leaf $Path
+            $oldBackups = Get-ChildItem -Path $dirName -Filter "$fileName.*.bak" | Sort-Object LastWriteTime -Descending
+            if ($oldBackups -and $oldBackups.Count -gt 5) {
+                $oldBackups | Select-Object -Skip 5 | Remove-Item -Force -ErrorAction SilentlyContinue
+            }
+        } catch {
+            Write-AppLog -Level WARN -Message "Vault backup copy failed: $($_.Exception.Message)"
+        }
     }
 
     Set-Content -Path $Path -Value $vaultJson -Encoding UTF8

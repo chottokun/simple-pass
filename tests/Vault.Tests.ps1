@@ -370,6 +370,36 @@ function Run-VaultTests {
     } catch {
         $results.Failed++
         $results.Log += "[FAIL] Test 15: Critical Property Resilience - $_"
+    }
+
+    # Test 16: Multi-generation timestamped backup and automatic 5-generation cleanup
+    try {
+        $testVaultPath = [System.IO.Path]::GetTempFileName() + "_vault.json"
+        $entries = @((New-VaultEntry -Title "BackupTest" -Username "user1"))
+        
+        # Save initial state
+        Save-Vault -Entries $entries -MasterPassword "pass" -Path $testVaultPath
+
+        # Execute multiple saves to create timestamped backups
+        for ($i = 0; $i -lt 7; $i++) {
+            Start-Sleep -Milliseconds 20
+            Save-Vault -Entries $entries -MasterPassword "pass" -Path $testVaultPath
+        }
+
+        $dirName = Split-Path -Parent $testVaultPath
+        $fileName = Split-Path -Leaf $testVaultPath
+        $bakFiles = Get-ChildItem -Path $dirName -Filter "$fileName.*.bak"
+
+        Assert-True ($bakFiles.Count -le 5) "Backup file count is capped at maximum 5 generations (Actual: $($bakFiles.Count))"
+
+        # Cleanup
+        Remove-Item "$testVaultPath*" -Force -ErrorAction SilentlyContinue
+
+        $results.Passed++
+        $results.Log += "[PASS] Test 16: Multi-generation timestamped backup and automatic cleanup"
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 16: Multi-generation timestamped backup - $_"
     } finally {
         if (Test-Path $tempFile) {
             Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
