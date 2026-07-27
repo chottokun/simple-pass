@@ -15,7 +15,7 @@ function New-CryptoSalt {
     return $bytes
 }
 
-function Derive-KeyIVAndHmac {
+function Get-DerivedKeyIVAndHmac {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -137,7 +137,7 @@ function ConvertTo-EncryptedVaultData {
         [switch]$UseDpapi = $false
     )
     $salt = New-CryptoSalt -Length 32
-    $derived = Derive-KeyIVAndHmac -Password $MasterPassword -Salt $salt
+    $derived = Get-DerivedKeyIVAndHmac -Password $MasterPassword -Salt $salt
     $aesCipher = Protect-DataWithAes -PlainText $JsonText -AesKey $derived.AesKey -AesIV $derived.AesIV
 
     $targetBytes = $aesCipher
@@ -176,7 +176,7 @@ function ConvertFrom-EncryptedVaultData {
 
     $salt = [Convert]::FromBase64String($VaultHashtable.salt)
     $rawBytes = [Convert]::FromBase64String($VaultHashtable.data)
-    $derived = Derive-KeyIVAndHmac -Password $MasterPassword -Salt $salt
+    $derived = Get-DerivedKeyIVAndHmac -Password $MasterPassword -Salt $salt
 
     # Constant-time comparison for HMAC to prevent timing attacks
     $expectedHmac = [Convert]::FromBase64String($VaultHashtable.hmac)
@@ -202,5 +202,5 @@ function ConvertFrom-EncryptedVaultData {
     return $jsonText
 }
 
-Export-ModuleMember -Function ConvertTo-EncryptedVaultData, ConvertFrom-EncryptedVaultData, New-CryptoSalt, Derive-KeyIVAndHmac, Protect-DataWithAes, Unprotect-DataWithAes, Protect-DataWithDpapi, Unprotect-DataWithDpapi, Get-HmacSignature
+Export-ModuleMember -Function ConvertTo-EncryptedVaultData, ConvertFrom-EncryptedVaultData, New-CryptoSalt, Get-DerivedKeyIVAndHmac, Protect-DataWithAes, Unprotect-DataWithAes, Protect-DataWithDpapi, Unprotect-DataWithDpapi, Get-HmacSignature
 

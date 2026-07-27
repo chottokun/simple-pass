@@ -1,5 +1,12 @@
-﻿Add-Type -AssemblyName PresentationCore
-Add-Type -AssemblyName System.Windows.Forms
+﻿$isWindowsPlatform = ($env:OS -eq 'Windows_NT') -or ($PSVersionTable.PSEdition -eq 'Desktop')
+try {
+    $isWindowsPlatform = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
+} catch {}
+
+if ($isWindowsPlatform) {
+    Add-Type -AssemblyName PresentationCore
+    Add-Type -AssemblyName System.Windows.Forms
+}
 
 function Get-SecureRandomInt {
     [CmdletBinding()]
@@ -93,6 +100,8 @@ function New-RandomPassword {
     return -join $passChars
 }
 
+$script:ClipboardSessionState = [hashtable]::Synchronized(@{ SessionId = "" })
+
 function Set-ClipboardWithAutoClear {
     [CmdletBinding()]
     param(
@@ -120,21 +129,29 @@ function Set-ClipboardWithAutoClear {
     }
 
     if ($ClearAfterSeconds -gt 0 -and $setSuccess) {
+        $newSessionId = [guid]::NewGuid().ToString()
+        $script:ClipboardSessionState.SessionId = $newSessionId
+
         $clearScript = {
-            param([string]$copiedText, [int]$delaySec)
+            param([string]$copiedText, [int]$delaySec, [hashtable]$sessionState, [string]$sessionId)
             Start-Sleep -Seconds $delaySec
             Add-Type -AssemblyName PresentationCore -ErrorAction SilentlyContinue
             Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
             try {
-                if ([System.Windows.Clipboard]::GetText() -eq $copiedText) {
-                    [System.Windows.Clipboard]::Clear()
+                # Only execute clear if no newer clipboard copy operation has been initiated
+                if ($sessionState.SessionId -eq $sessionId) {
+                    if ([System.Windows.Clipboard]::GetText() -eq $copiedText) {
+                        [System.Windows.Clipboard]::Clear()
+                    }
                 }
             } catch {
                 try {
-                    if ([System.Windows.Forms.Clipboard]::GetText() -eq $copiedText) {
-                        [System.Windows.Forms.Clipboard]::Clear()
+                    if ($sessionState.SessionId -eq $sessionId) {
+                        if ([System.Windows.Forms.Clipboard]::GetText() -eq $copiedText) {
+                            [System.Windows.Forms.Clipboard]::Clear()
+                        }
                     }
-                } catch {}
+                } catch { <# Suppress non-critical secondary clipboard clear exception #> }
             }
         }
 
@@ -149,6 +166,8 @@ function Set-ClipboardWithAutoClear {
         [void]$p.AddScript($clearScript)
         [void]$p.AddArgument($Text)
         [void]$p.AddArgument($ClearAfterSeconds)
+        [void]$p.AddArgument($script:ClipboardSessionState)
+        [void]$p.AddArgument($newSessionId)
 
         $callback = [AsyncCallback]{
             param($ar)
@@ -157,10 +176,10 @@ function Set-ClipboardWithAutoClear {
             $rs_inst = $stateObj.Runspace
             try {
                 $null = $p_inst.EndInvoke($ar)
-            } catch {}
-            try { $p_inst.Dispose() } catch {}
-            try { $rs_inst.Close() } catch {}
-            try { $rs_inst.Dispose() } catch {}
+            } catch { <# Async invocation end cleanup #> }
+            try { $p_inst.Dispose() } catch { <# Instance cleanup #> }
+            try { $rs_inst.Close() } catch { <# Runspace close cleanup #> }
+            try { $rs_inst.Dispose() } catch { <# Runspace dispose cleanup #> }
         }
 
         $stateObj = [PSCustomObject]@{ PowerShell = $p; Runspace = $rs }
@@ -170,4 +189,22 @@ function Set-ClipboardWithAutoClear {
     return $setSuccess
 }
 
-Export-ModuleMember -Function New-RandomPassword, Set-ClipboardWithAutoClear, Get-SecureRandomInt
+function Test-PasswordStrength {
+    [CmdletBinding()]
+    param(
+        [string]$Password
+    )
+    if ([string]::IsNullOrEmpty($Password) -or $Password.Length -lt 8) {
+        return $false
+    }
+
+    $score = 0
+    if ($Password -cmatch '[A-Z]') { $score++ }
+    if ($Password -cmatch '[a-z]') { $score++ }
+    if ($Password -match '[0-9]') { $score++ }
+    if ($Password -match '[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]') { $score++ }
+
+    return $score -ge 3
+}
+
+Export-ModuleMember -Function New-RandomPassword, Set-ClipboardWithAutoClear, Get-SecureRandomInt, Test-PasswordStrength

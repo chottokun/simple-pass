@@ -27,7 +27,9 @@ function Write-AppLog {
             $oldFile = Join-Path (Split-Path -Parent $logFile) "app.log.old"
             Move-Item -Path $logFile -Destination $oldFile -Force -ErrorAction SilentlyContinue
         }
-    } catch {}
+    } catch {
+        Write-Debug "Log rotation failed: $($_.Exception.Message)"
+    }
 
     $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
     $logLine = "$timestamp [$Level] $Message"
