@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 setlocal
 cd /d "%~dp0"
-call "%~dp0start_JP.bat"
+powershell -ExecutionPolicy Bypass -NoProfile -File "%~dp0src\SimplePASS_JP.ps1"

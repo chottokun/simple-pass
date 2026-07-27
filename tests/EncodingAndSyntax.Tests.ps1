@@ -39,11 +39,12 @@ function Run-EncodingAndSyntaxTests {
         $results.Log += "[FAIL] Test 1: AST Syntax Error check - $_"
     }
 
-    # Test 2: Ensure ALL PowerShell script files strictly have UTF-8 BOM (Universal Policy)
+    # Test 2: Ensure ALL PowerShell script and Batch files strictly have UTF-8 BOM (Universal Policy)
     try {
         $missingBomFiles = @()
+        $scriptAndBatFiles = Get-ChildItem -Path $repoRootDir -Recurse -Include *.ps1,*.psm1,*.bat
 
-        foreach ($file in $psFiles) {
+        foreach ($file in $scriptAndBatFiles) {
             $bytes = [System.IO.File]::ReadAllBytes($file.FullName)
             $hasBom = ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF)
             if (-not $hasBom) {
@@ -51,9 +52,9 @@ function Run-EncodingAndSyntaxTests {
             }
         }
 
-        Assert-True ($missingBomFiles.Count -eq 0) "All PowerShell scripts strictly have UTF-8 BOM (Missing in: $($missingBomFiles -join ', '))"
+        Assert-True ($missingBomFiles.Count -eq 0) "All script & batch files strictly have UTF-8 BOM (Missing in: $($missingBomFiles -join ', '))"
         $results.Passed++
-        $results.Log += "[PASS] Test 2: Universal UTF-8 BOM Compliance across all $($psFiles.Count) PowerShell files"
+        $results.Log += "[PASS] Test 2: Universal UTF-8 BOM Compliance across all $($scriptAndBatFiles.Count) script and batch files"
     } catch {
         $results.Failed++
         $results.Log += "[FAIL] Test 2: Universal UTF-8 BOM compliance check - $_"

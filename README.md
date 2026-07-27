@@ -53,15 +53,13 @@ Windows環境で動作する、ローカル完結型の PowerShell + WPF パス�
 
 ### 日本語版
 ```cmd
-start_JP.bat
+SimplePASS_JP.bat
 ```
-*(または `SimplePASS_JP.bat`)*
 
 ### 英語版
 ```cmd
-start.bat
+SimplePASS.bat
 ```
-*(または `SimplePASS.bat`)*
 
 ---
 
@@ -69,10 +67,8 @@ start.bat
 
 ```text
 SimplePASS/
-├── start.bat                             # 起動用バッチファイル (英語版)
-├── start_JP.bat                          # 起動用バッチファイル (日本語版)
-├── SimplePASS.bat                        # エリアス用バッチファイル
-├── SimplePASS_JP.bat                     # エリアス用バッチファイル
+├── SimplePASS.bat                        # 起動用バッチファイル (英語版)
+├── SimplePASS_JP.bat                     # 起動用バッチファイル (日本語版)
 ├── README.md                             # 本ドキュメント
 ├── LICENSE                               # ライセンスファイル (MIT License)
 ├── SECURITY.md                           # セキュリティポリシー
