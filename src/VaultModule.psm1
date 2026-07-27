@@ -68,7 +68,7 @@ function Save-Vault {
         }
     }
 
-    Set-Content -Path $Path -Value $vaultJson -Encoding UTF8
+    [System.IO.File]::WriteAllText($Path, $vaultJson, [System.Text.UTF8Encoding]::new($false))
 }
 
 function Load-Vault {
