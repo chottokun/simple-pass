@@ -400,6 +400,45 @@ function Run-VaultTests {
     } catch {
         $results.Failed++
         $results.Log += "[FAIL] Test 16: Multi-generation timestamped backup - $_"
+    }
+
+    # Test 17: TDD - Save-Vault BOM Customization (BOM vs No-BOM)
+    try {
+        $testVaultPathBOM = [System.IO.Path]::GetTempFileName() + "_vault_bom.json"
+        $testVaultPathNoBOM = [System.IO.Path]::GetTempFileName() + "_vault_nobom.json"
+        $entries = @((New-VaultEntry -Title "BOMTest"))
+
+        try {
+            # 1. Save WITH BOM (Default behavior)
+            Save-Vault -Entries $entries -MasterPassword "pass" -Path $testVaultPathBOM
+
+            # 2. Save WITHOUT BOM (-NoBOM switch)
+            Save-Vault -Entries $entries -MasterPassword "pass" -Path $testVaultPathNoBOM -NoBOM
+
+            # Validate BOM presence/absence in file headers
+            $bytesBOM = [System.IO.File]::ReadAllBytes($testVaultPathBOM)
+            $hasBOM = ($bytesBOM.Length -ge 3 -and $bytesBOM[0] -eq 0xEF -and $bytesBOM[1] -eq 0xBB -and $bytesBOM[2] -eq 0xBF)
+            Assert-True $hasBOM "Save-Vault without -NoBOM (default) should save file with UTF-8 BOM"
+
+            $bytesNoBOM = [System.IO.File]::ReadAllBytes($testVaultPathNoBOM)
+            $hasNoBOM = ($bytesNoBOM.Length -ge 3 -and $bytesNoBOM[0] -eq 0xEF -and $bytesNoBOM[1] -eq 0xBB -and $bytesNoBOM[2] -eq 0xBF)
+            Assert-True (-not $hasNoBOM) "Save-Vault with -NoBOM should save file strictly without UTF-8 BOM"
+
+            # Validate both load correctly
+            $loadedBOM = Load-Vault -MasterPassword "pass" -Path $testVaultPathBOM
+            $loadedNoBOM = Load-Vault -MasterPassword "pass" -Path $testVaultPathNoBOM
+            Assert-True ($loadedBOM[0].title -eq "BOMTest") "Loads BOM vault cleanly"
+            Assert-True ($loadedNoBOM[0].title -eq "BOMTest") "Loads No-BOM vault cleanly"
+
+            $results.Passed++
+            $results.Log += "[PASS] Test 17: Save-Vault BOM Customization (BOM vs No-BOM)"
+        } finally {
+            if (Test-Path $testVaultPathBOM) { Remove-Item $testVaultPathBOM -Force -ErrorAction SilentlyContinue }
+            if (Test-Path $testVaultPathNoBOM) { Remove-Item $testVaultPathNoBOM -Force -ErrorAction SilentlyContinue }
+        }
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 17: Save-Vault BOM Customization - $_"
     } finally {
         if (Test-Path $tempFile) {
             Remove-Item $tempFile -Force -ErrorAction SilentlyContinue

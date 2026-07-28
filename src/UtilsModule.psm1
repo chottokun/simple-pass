@@ -129,64 +129,77 @@ function Set-ClipboardWithAutoClear {
     }
 
     if ($ClearAfterSeconds -gt 0 -and $setSuccess) {
-        $newSessionId = [guid]::NewGuid().ToString()
-        $script:ClipboardSessionState.SessionId = $newSessionId
-
-        $clearScript = {
-            param([string]$copiedText, [int]$delaySec, [hashtable]$sessionState, [string]$sessionId)
-            Start-Sleep -Seconds $delaySec
-            Add-Type -AssemblyName PresentationCore -ErrorAction SilentlyContinue
-            Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
-            try {
-                # Only execute clear if no newer clipboard copy operation has been initiated
-                if ($sessionState.SessionId -eq $sessionId) {
-                    if ([System.Windows.Clipboard]::GetText() -eq $copiedText) {
-                        [System.Windows.Clipboard]::Clear()
-                    }
-                }
-            } catch {
-                try {
-                    if ($sessionState.SessionId -eq $sessionId) {
-                        if ([System.Windows.Forms.Clipboard]::GetText() -eq $copiedText) {
-                            [System.Windows.Forms.Clipboard]::Clear()
-                        }
-                    }
-                } catch { <# Suppress non-critical secondary clipboard clear exception #> }
-            }
-        }
-
-        # Use an asynchronous STA background runspace and PowerShell instance to correctly run WPF clipboard functions
-        $rs = [runspacefactory]::CreateRunspace()
-        $rs.ApartmentState = "STA"
-        $rs.ThreadOptions = "UseNewThread"
-        $rs.Open()
-
-        $p = [powershell]::Create()
-        $p.Runspace = $rs
-        [void]$p.AddScript($clearScript)
-        [void]$p.AddArgument($Text)
-        [void]$p.AddArgument($ClearAfterSeconds)
-        [void]$p.AddArgument($script:ClipboardSessionState)
-        [void]$p.AddArgument($newSessionId)
-
-        $callback = [AsyncCallback]{
-            param($ar)
-            $stateObj = $ar.AsyncState
-            $p_inst = $stateObj.PowerShell
-            $rs_inst = $stateObj.Runspace
-            try {
-                $null = $p_inst.EndInvoke($ar)
-            } catch { <# Async invocation end cleanup #> }
-            try { $p_inst.Dispose() } catch { <# Instance cleanup #> }
-            try { $rs_inst.Close() } catch { <# Runspace close cleanup #> }
-            try { $rs_inst.Dispose() } catch { <# Runspace dispose cleanup #> }
-        }
-
-        $stateObj = [PSCustomObject]@{ PowerShell = $p; Runspace = $rs }
-        [void]$p.BeginInvoke([System.Management.Automation.PSDataCollection[System.Management.Automation.PSObject]]::new(), [System.Management.Automation.PSInvocationSettings]::new(), $callback, $stateObj)
+        Start-AsynchronousClipboardClear -Text $Text -DelaySeconds $ClearAfterSeconds
     }
 
     return $setSuccess
+}
+
+<#
+.SYNOPSIS
+    Starts an asynchronous background runspace to clear the clipboard after a delay.
+#>
+function Start-AsynchronousClipboardClear {
+    param(
+        [string]$Text,
+        [int]$DelaySeconds
+    )
+
+    $newSessionId = [guid]::NewGuid().ToString()
+    $script:ClipboardSessionState.SessionId = $newSessionId
+
+    $clearScript = {
+        param([string]$copiedText, [int]$delaySec, [hashtable]$sessionState, [string]$sessionId)
+        Start-Sleep -Seconds $delaySec
+        Add-Type -AssemblyName PresentationCore -ErrorAction SilentlyContinue
+        Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
+        try {
+            # Only execute clear if no newer clipboard copy operation has been initiated
+            if ($sessionState.SessionId -eq $sessionId) {
+                if ([System.Windows.Clipboard]::GetText() -eq $copiedText) {
+                    [System.Windows.Clipboard]::Clear()
+                }
+            }
+        } catch {
+            try {
+                if ($sessionState.SessionId -eq $sessionId) {
+                    if ([System.Windows.Forms.Clipboard]::GetText() -eq $copiedText) {
+                        [System.Windows.Forms.Clipboard]::Clear()
+                    }
+                }
+            } catch { <# Suppress non-critical secondary clipboard clear exception #> }
+        }
+    }
+
+    # Use an asynchronous STA background runspace and PowerShell instance to correctly run WPF clipboard functions
+    $rs = [runspacefactory]::CreateRunspace()
+    $rs.ApartmentState = "STA"
+    $rs.ThreadOptions = "UseNewThread"
+    $rs.Open()
+
+    $p = [powershell]::Create()
+    $p.Runspace = $rs
+    [void]$p.AddScript($clearScript)
+    [void]$p.AddArgument($Text)
+    [void]$p.AddArgument($DelaySeconds)
+    [void]$p.AddArgument($script:ClipboardSessionState)
+    [void]$p.AddArgument($newSessionId)
+
+    $callback = [AsyncCallback]{
+        param($ar)
+        $stateObj = $ar.AsyncState
+        $p_inst = $stateObj.PowerShell
+        $rs_inst = $stateObj.Runspace
+        try {
+            $null = $p_inst.EndInvoke($ar)
+        } catch { <# Async invocation end cleanup #> }
+        try { $p_inst.Dispose() } catch { <# Instance cleanup #> }
+        try { $rs_inst.Close() } catch { <# Runspace close cleanup #> }
+        try { $rs_inst.Dispose() } catch { <# Runspace dispose cleanup #> }
+    }
+
+    $stateObj = [PSCustomObject]@{ PowerShell = $p; Runspace = $rs }
+    [void]$p.BeginInvoke([System.Management.Automation.PSDataCollection[System.Management.Automation.PSObject]]::new(), [System.Management.Automation.PSInvocationSettings]::new(), $callback, $stateObj)
 }
 
 function Test-PasswordStrength {

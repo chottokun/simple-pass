@@ -15,6 +15,7 @@
     EmptyPassError = "マスターパスワードを入力してください。"
     ErrorWeakPassword = "マスターパスワードは8文字以上で、英大文字・英小文字・数字・記号のうち3種類以上を含める必要があります。"
     LoginFailError = "マスターパスワードが正しくないか、データ破損、または旧v1.0形式です。"
+    LoginFailErrorWithBackup = "マスターパスワードが正しくないか、データ破損が検出されました。自動バックアップが検出されました。バックアップからの復元案内を表示しますか？"
     CreateFailError = "保管庫の作成に失敗しました: "
     FirstRunSuccessStatus = "マスターパスワードが登録され、保管庫が初期化されました。"
     UnlockSuccessStatus = "認証成功: {0} 件のエントリを読み込みました。"
@@ -99,6 +100,10 @@
     LogCsvFailed = "JP CSV Export failed"
     MsgCsvFailed = "CSV出力に失敗しました: "
     MsgCsvFailedTitle = "出力エラー"
+
+    # Backup & Recovery Guidance
+    MsgBackupGuidanceTitle = "保管庫データの復旧案内"
+    MsgBackupGuidance = "データ破損またはパスワード誤りが検出されましたが、'data/' フォルダ内に自動バックアップ (.bak) が保存されています。`n`n【復旧手順】:`n1. このアプリケーションを一旦終了します。`n2. 'data/' フォルダを開きます。`n3. 現在の 'vault.json' を念のため別の場所にバックアップ退避します。`n4. 最も新しいバックアップファイル (例: 'vault.json.2026xxxx_xxxxxx_xxx.bak') を 'vault.json' にリネームします。`n5. アプリケーションを再起動し、ログインを試行してください。`n`n今すぐ 'data/' フォルダを開きますか？"
 
     # URL Security
     UrlBlockMsg = "セキュリティ上の理由により、このURLの起動はブロックされました。http:// および https:// のURLのみ許可されています。"

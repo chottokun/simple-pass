@@ -31,7 +31,8 @@ function Save-Vault {
         [array]$Entries = @(),
         [Parameter(Mandatory=$true)]
         [string]$MasterPassword,
-        [string]$Path = (Get-DefaultVaultPath)
+        [string]$Path = (Get-DefaultVaultPath),
+        [switch]$NoBOM = $false
     )
     if ($null -eq $Entries -or $Entries.Count -eq 0) {
         $jsonText = "[]"
@@ -68,7 +69,8 @@ function Save-Vault {
         }
     }
 
-    Set-Content -Path $Path -Value $vaultJson -Encoding UTF8
+    $encoding = [System.Text.UTF8Encoding]::new(-not $NoBOM)
+    [System.IO.File]::WriteAllText($Path, $vaultJson, $encoding)
 }
 
 function Load-Vault {

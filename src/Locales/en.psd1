@@ -15,6 +15,7 @@
     EmptyPassError = "Please enter a Master Password."
     ErrorWeakPassword = "Master Password must be at least 8 characters long and include at least 3 of: uppercase letters, lowercase letters, numbers, and symbols."
     LoginFailError = "Invalid Master Password, corrupt data, or legacy v1.0 vault format."
+    LoginFailErrorWithBackup = "Invalid Master Password or corrupt data. Automatic backups were found. Would you like to view backup restoration guidance?"
     CreateFailError = "Failed to create Vault: "
     FirstRunSuccessStatus = "Master Password created successfully. Vault initialized."
     UnlockSuccessStatus = "Authenticated successfully. Loaded {0} entries."
@@ -99,6 +100,10 @@
     LogCsvFailed = "CSV Export failed"
     MsgCsvFailed = "Failed to export CSV: "
     MsgCsvFailedTitle = "Export Error"
+
+    # Backup & Recovery Guidance
+    MsgBackupGuidanceTitle = "Vault Data Recovery Guidance"
+    MsgBackupGuidance = "A corrupt vault file or incorrect password was detected, but automatic backups (.bak) exist under your 'data/' folder.`n`nTo restore your data:`n1. Close this application.`n2. Open the 'data/' folder.`n3. Back up the current 'vault.json' elsewhere.`n4. Rename the most recent backup file (e.g. 'vault.json.2026xxxx_xxxxxx_xxx.bak') to 'vault.json'.`n5. Restart the application and try logging in.`n`nWould you like to open the 'data/' folder now?"
 
     # URL Security
     UrlBlockMsg = "Opening this URL is blocked for security reasons. Only http:// and https:// URLs are allowed."

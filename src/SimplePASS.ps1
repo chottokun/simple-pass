@@ -388,7 +388,36 @@ $btnLogin.Add_Click({
     } catch {
         Write-AppLog -Level ERROR -Message $res.LoginFailLog -Exception $_.Exception
         if (Test-VaultExists) {
-            $txtLoginError.Text = $res.LoginFailError
+            # Check if any backup files exist to provide recovery guidance
+            $vaultPath = Get-DefaultVaultPath
+            $dirName = Split-Path -Parent $vaultPath
+            $fileName = Split-Path -Leaf $vaultPath
+            $backupsExist = $false
+            if ($dirName -and (Test-Path $dirName)) {
+                $backups = Get-ChildItem -Path $dirName -Filter "$fileName.*.bak" -ErrorAction SilentlyContinue
+                if ($backups -and $backups.Count -gt 0) {
+                    $backupsExist = $true
+                }
+            }
+
+            if ($backupsExist) {
+                $txtLoginError.Text = $res.LoginFailErrorWithBackup
+
+                # Ask user if they want to see the restore guidance
+                $askRes = [System.Windows.MessageBox]::Show($res.MsgBackupGuidance, $res.MsgBackupGuidanceTitle, "YesNo", "Question")
+                if ($askRes -eq "Yes") {
+                    try {
+                        $psi = New-Object System.Diagnostics.ProcessStartInfo
+                        $psi.FileName = $dirName
+                        $psi.UseShellExecute = $true
+                        [System.Diagnostics.Process]::Start($psi) | Out-Null
+                    } catch {
+                        Write-AppLog -Level ERROR -Message "Failed to open data folder" -Exception $_.Exception
+                    }
+                }
+            } else {
+                $txtLoginError.Text = $res.LoginFailError
+            }
         } else {
             $txtLoginError.Text = "$($res.CreateFailError)$($_.Exception.Message)"
         }
