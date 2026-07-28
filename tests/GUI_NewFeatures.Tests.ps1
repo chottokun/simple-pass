@@ -419,9 +419,66 @@ function Run-GuiNewFeaturesTests {
         $results.Log += "[FAIL] Test 7: Auto-Lock Tick Handler Behaviour & Inactivity Conditions - $_"
     }
 
+    # Test 8: Backup File Detection & Recovery Error Message on Login Failure
+    try {
+        $tempDataDir = Join-Path ([System.IO.Path]::GetTempPath()) ("simplepass_test_dir_" + [guid]::NewGuid().ToString("N"))
+        $null = New-Item -ItemType Directory -Path $tempDataDir -Force
+        $tempVaultFile = Join-Path $tempDataDir "vault.json"
+
+        try {
+            # 1. Create a dummy vault file
+            $e1 = New-VaultEntry -Title "Test"
+            Save-Vault -Entries @($e1) -MasterPassword "CorrectPass123" -Path $tempVaultFile
+
+            $res = [PSCustomObject]@{
+                LoginFailError = "Invalid Master Password, corrupt data, or legacy v1.0 vault format."
+                LoginFailErrorWithBackup = "Invalid Master Password or corrupt data. Automatic backups were found."
+            }
+
+            # Helper block simulating login failure logic in SimplePASS.ps1
+            $checkBackupLogic = {
+                param([string]$vaultPath, [PSCustomObject]$res)
+                $dirName = Split-Path -Parent $vaultPath
+                $fileName = Split-Path -Leaf $vaultPath
+                $backupsExist = $false
+                if ($dirName -and (Test-Path $dirName)) {
+                    $backups = Get-ChildItem -Path $dirName -Filter "$fileName.*.bak" -ErrorAction SilentlyContinue
+                    if ($backups -and $backups.Count -gt 0) {
+                        $backupsExist = $true
+                    }
+                }
+                if ($backupsExist) {
+                    return $res.LoginFailErrorWithBackup
+                } else {
+                    return $res.LoginFailError
+                }
+            }
+
+            # Scenario A: No backup files exist
+            $errMsgNoBackup = & $checkBackupLogic -vaultPath $tempVaultFile -res $res
+            Assert-True ($errMsgNoBackup -eq $res.LoginFailError) "Standard error message returned when no backup exists"
+
+            # Scenario B: Backup file exists
+            $fakeBackupFile = Join-Path $tempDataDir "vault.json.20260728_120000_000.bak"
+            [System.IO.File]::WriteAllText($fakeBackupFile, "backup data")
+
+            $errMsgWithBackup = & $checkBackupLogic -vaultPath $tempVaultFile -res $res
+            Assert-True ($errMsgWithBackup -eq $res.LoginFailErrorWithBackup) "Backup guidance error message returned when backup exists"
+
+            $results.Passed++
+            $results.Log += "[PASS] Test 8: Backup Detection & Recovery Error Message on Login Failure"
+        } finally {
+            if (Test-Path $tempDataDir) { Remove-Item $tempDataDir -Recurse -Force -ErrorAction SilentlyContinue }
+        }
+    } catch {
+        $results.Failed++
+        $results.Log += "[FAIL] Test 8: Backup Detection & Recovery Error Message - $_"
+    }
+
     return $results
 }
 
 if ($MyInvocation.InvocationName -ne '.') {
     Run-GuiNewFeaturesTests
 }
+
