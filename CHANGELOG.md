@@ -2,7 +2,18 @@
 
 All notable changes to the **SimplePASS** project will be documented in this file.
 
+## [2.2.0] - 2026-07-28
+
+### Added
+- **Vault Data Recovery Guidance**: Added automatic detection of `.bak` backup files on login failure or data corruption with user recovery instructions and prompt.
+- **Save-Vault UTF-8 BOM Control**: Enhanced `Save-Vault` using `[System.IO.File]::WriteAllText` and `-NoBOM` switch for cross-platform UTF-8 encoding stability across PowerShell 5.1 and Core 7+.
+- **Expanded Test Suite (77 Tests)**: Added TDD unit tests for backup recovery guidance, XAML form field validation, password strength rules, URL scheme security whitelisting, multilingual resource key parity (`en.psd1` vs `ja.psd1`), and background clipboard integration.
+
+### Refactored
+- **Clipboard Clear Refactoring**: Extracted private helper function `Start-AsynchronousClipboardClear` in `UtilsModule.psm1` for cleaner code organization.
+
 ## [2.1.0] - 2026-07-26
+
 
 ### Performance & Optimization
 - **Native .NET Cryptographic Constructors**: Refactored `CryptoModule` to use direct `[Type]::new()` constructors for `byte[]`, `Rfc2898DeriveBytes`, and `HMACSHA256`, eliminating reflection and COM overhead.

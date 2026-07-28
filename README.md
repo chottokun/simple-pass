@@ -5,16 +5,11 @@
 [![PowerShell 5.1+](https://img.shields.io/badge/PowerShell-5.1%2B-blue.svg)](https://microsoft.com/powershell)
 
 Windows環境で動作する、ローカル完結型の PowerShell + WPF パスワード管理 GUI アプリケーション。
-外部サーバー通信は行わず、スタンドアロンかつポータブルに動作する。
-英語・日本語の動的ローカリゼーションに対応し、単一のコードベースから両言語版を提供する。
-
----
-
-## 主な機能
-
-- **WPF GUI**: PowerShell 5.1 / WPF (XAML) による GUI。ウィンドウアイコン付き。
-- **動的ローカリゼーション (i18n)**: `-Language` パラメータとリソース辞書による英語/日本語切替。`SimplePASS_JP.ps1` は `SimplePASS.ps1 -Language ja` を呼び出す薄いラッパー。
+外部サーバー通信は行わ�- **WPF GUI**: PowerShell 5.1 / WPF (XAML) による GUI。ウィンドウアイコン付き。
+- **動的ローカリゼーション (i18n)**: `-Language` パラメータとリソース辞書（`src/Locales/en.psd1`, `ja.psd1`）による英語/日本語切替。
 - **暗号化 (v2.0)**: PBKDF2-SHA256 (100,000回) + AES-256-CBC + HMAC-SHA256 改ざん検知。
+- **データ障害復旧案内 (Data Recovery Guidance)**: ログイン失敗時やデータ破損時に自動バックアップ（`.bak`）を検出し、復旧手順の案内ダイアログと指示メッセージを提示。
+- **エンコーディング制御 (Save-Vault BOM Control)**: `[System.IO.File]::WriteAllText` による環境非依存の UTF-8 エンコーディング制御と `-NoBOM` スイッチ対応。
 - **最上部固定 (Top Pinning)**: エントリをリスト最上部へ固定・順序保存。
 - **URLワンクリック起動**: プロトコルホワイトリスト (`http://`, `https://`) バリデーション付き。
 - **CSV エクスポート**: 確認ダイアログ付きで保管庫データを CSV 出力。
@@ -86,9 +81,53 @@ SimplePASS/
 │   ├── SimplePASS.ps1                    # 統合 GUI アプリケーション (-Language en|ja で言語切替)
 │   ├── SimplePASS_JP.ps1                 # 日本語版ラッパー (SimplePASS.ps1 -Language ja を呼出)
 │   ├── CryptoModule.psm1                 # 暗号コアモジュール (PBKDF2-SHA256 + AES-256 + HMAC)
-│   ├── VaultModule.psm1                  # 保管庫データ CRUD & 永続化モジュール
+│   ├── VaultModule.psm1                  # 保管庫データ CRUD・永続化・BOMカスタマイズ保存モジュール
 │   ├── UtilsModule.psm1                  # クリップボード自動消去 & パスワード生成器
-│   └── LoggerModule.psm1                 # エラーログ・例外追跡モジュール
+│   ├── LoggerModule.psm1                 # エラーログ・例外追跡モジュール
+│   └── Locales/                          # 多言語リソースデータファイル (.psd1)
+│       ├── en.psd1                       # 英語リソースデータファイル (UTF-8 BOM)
+│       └── ja.psd1                       # 日本語リソースデータファイル (UTF-8 BOM)
+└── tests/
+    ├── RunAllTests.ps1                   # 全自動統合テストランナー (全77項目)
+    ├── Crypto.Tests.ps1                  # 暗号 (AES/HMAC/PBKDF2/Salt/DPAPI) 23テスト
+    ├── Vault.Tests.ps1                   # CRUD・CSV出力・順序操作・URL耐性・BOMカスタマイズ 17テスト
+    ├── Utils.Tests.ps1                   # パスワード生成・クリップボード非同期消去・リトライ 7テスト
+    ├── GUI.Tests.ps1                     # DataGrid バインディング・XAML パース・LoginUIState 4テスト
+    ├── GUI_FullButtons.Tests.ps1         # フル UI ボタンインタラクション 1テスト
+    ├── GUI_CriticalUserOperations.Tests.ps1 # 再認証・0件検索・フォーム入力・URLセキュリティ・i18nキー適合 7テスト
+    ├── GUI_JP.Tests.ps1                  # 日本語 XAML 展開・Lock-VaultApp・LoginUIState 3テスト
+    ├── GUI_NewFeatures.Tests.ps1         # パスワード変更・表示トグル・AutoLockTimer・ログイン失敗バックアップ案内 8テスト
+    ├── EncodingAndSyntax.Tests.ps1       # AST構文解析・全ファイルUTF-8 BOM適合・PSScriptAnalyzer・psd1解析 5テスト
+    └── Logger.Tests.ps1                  # ログ記録・例外スタックトレース出力 2テスト
+```
+
+---
+
+## テスト (Testing)
+
+全77項目の自動テストスイートを含む。AST 構文解析・全ファイル UTF-8 BOM 適合検証・`.psd1` 解析・`PSScriptAnalyzer` 静的コード解析も実行される。
+GitHub Actions CI (`windows-latest`) で push / PR 時に自動実行される。
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "tests\RunAllTests.ps1"
+```
+
+### テスト内訳
+
+| テストファイル | 項目数 | 対象 |
+|---|---|---|
+| Crypto.Tests.ps1 | 23 | AES-256, HMAC-SHA256, PBKDF2, Salt, DPAPI |
+| Vault.Tests.ps1 | 17 | CRUD, CSV出力, 順序操作, URL耐性, BOMカスタマイズ保存 |
+| Utils.Tests.ps1 | 7 | パスワード生成, クリップボード非同期消去・リトライ, 境界値 |
+| GUI.Tests.ps1 | 4 | DataGrid, XAML パース, LoginUIState |
+| GUI_FullButtons.Tests.ps1 | 1 | フル UI ボタンワークフロー |
+| GUI_CriticalUserOperations.Tests.ps1 | 7 | 再認証, 0件検索復帰, フォーム入力, URLセキュリティ, i18n適合 |
+| GUI_JP.Tests.ps1 | 3 | 日本語 XAML 展開, Lock-VaultApp, LoginUIState |
+| GUI_NewFeatures.Tests.ps1 | 8 | パスワード変更, 表示トグル, AutoLockTimer, バックアップ復旧案内 |
+| EncodingAndSyntax.Tests.ps1 | 5 | AST 構文, UTF-8 BOM, PSScriptAnalyzer, .psd1解析, Batch |
+| Logger.Tests.ps1 | 2 | ログ記録, 例外スタックトレース |
+| **合計** | **77** | |
+sm1                 # エラーログ・例外追跡モジュール
 └── tests/
     ├── RunAllTests.ps1                   # 全自動統合テストランナー (全66項目)
     ├── Crypto.Tests.ps1                  # 暗号 (AES/HMAC/PBKDF2/Salt/DPAPI) 23テスト
