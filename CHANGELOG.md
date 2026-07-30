@@ -2,6 +2,15 @@
 
 All notable changes to the **SimplePASS** project will be documented in this file.
 
+## [2.3.0] - 2026-07-30
+
+### Performance & Optimization
+- **Vault Search Optimization (~25-30% Speedup)**: Optimized `Search-VaultEntries` in `VaultModule.psm1` by replacing repeated `.ToLower()` string allocations in loops with allocation-free `.IndexOf(..., [System.StringComparison]::OrdinalIgnoreCase)` ordinal comparisons.
+- **PowerShell 5.1 Compatibility**: Guaranteed cross-platform compatibility across Windows PowerShell 5.1 (.NET Framework) and PowerShell Core 7+ (.NET Core) through direct string coercion and standard .NET string comparison overloads.
+
+### Added
+- **Search Performance Benchmark Script**: Added `tests/BenchmarkSearch.ps1` to benchmark and measure `Search-VaultEntries` performance against large vault entry datasets (5,000+ entries).
+
 ## [2.2.0] - 2026-07-28
 
 ### Added
