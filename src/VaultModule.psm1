@@ -267,15 +267,17 @@ function Search-VaultEntries {
     if ([string]::IsNullOrWhiteSpace($Keyword)) {
         return @($Entries)
     }
-    $kw = $Keyword.ToLower()
     $matchedList = [System.Collections.Generic.List[Object]]::new()
     foreach ($entry in $Entries) {
-        $t  = ([string]$entry.title).ToLower()
-        $u  = ([string]$entry.url).ToLower()
-        $un = ([string]$entry.username).ToLower()
-        $n  = ([string]$entry.note).ToLower()
+        $t  = [string]$entry.title
+        $u  = [string]$entry.url
+        $un = [string]$entry.username
+        $n  = [string]$entry.note
 
-        if ($t.Contains($kw) -or $u.Contains($kw) -or $un.Contains($kw) -or $n.Contains($kw)) {
+        if ($t.IndexOf($Keyword, [System.StringComparison]::OrdinalIgnoreCase) -ne -1 -or
+            $u.IndexOf($Keyword, [System.StringComparison]::OrdinalIgnoreCase) -ne -1 -or
+            $un.IndexOf($Keyword, [System.StringComparison]::OrdinalIgnoreCase) -ne -1 -or
+            $n.IndexOf($Keyword, [System.StringComparison]::OrdinalIgnoreCase) -ne -1) {
             $matchedList.Add($entry)
         }
     }
